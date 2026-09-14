@@ -245,6 +245,36 @@ textarea{min-height:74px;resize:vertical}
   .drawer{width:100%}
 }
 
+/* ---------- timeline ---------- */
+.tl{max-width:820px;margin:0 auto;padding:2px 0 44px}
+.tl-key{display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 6px;font-size:12px;color:var(--muted)}
+.tl-key span{display:inline-flex;align-items:center;gap:6px}
+.tl-key i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.tl-key i.green{background:var(--accent)} .tl-key i.stock{background:var(--ok)} .tl-key i.kirsty{background:var(--male)}
+.tl-decade{font-family:"Newsreader",Georgia,serif;font-size:22px;font-weight:500;color:var(--ink);
+  margin:30px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line);letter-spacing:-.01em}
+.tl-list{list-style:none;margin:0;padding:0}
+.tl-row{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:baseline;
+  padding:9px 0 9px 16px;border-left:2px solid var(--line-soft);position:relative}
+.tl-row:before{content:"";position:absolute;left:-6px;top:15px;width:9px;height:9px;border-radius:50%;
+  background:var(--line);border:2px solid var(--ground)}
+.tl-row.green:before{background:var(--accent)}
+.tl-row.stock:before{background:var(--ok)}
+.tl-row.kirsty:before{background:var(--male)}
+.tl-when{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);
+  letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-what{font-size:14px;color:var(--ink-soft);line-height:1.5}
+.tl-what a{color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1px solid var(--line)}
+.tl-what a:hover{border-bottom-color:var(--accent);color:var(--accent)}
+.tl-place{color:var(--muted);font-size:12.5px}
+.tl-approx{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);
+  border:1px solid var(--line);border-radius:2px;padding:0 4px;margin-left:6px;vertical-align:1px}
+@media (max-width:620px){
+  .tl-row{grid-template-columns:1fr;gap:1px;padding-left:14px}
+  .tl-row:before{top:13px}
+  .tl-what{font-size:13.5px}
+}
+
 /* `hidden` must beat any display rule below, or the panel never goes away. */
 [hidden]{display:none !important}
 #gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--ground)}
@@ -288,6 +318,7 @@ textarea{min-height:74px;resize:vertical}
     <button class="whoami" id="whoami">Sign your name</button>
     <button class="btn" id="btn-questions">Questions <span id="q-count"></span></button>
     <button class="btn" id="btn-review">Review queue</button>
+    <button class="btn" id="btn-timeline">Timeline</button>
     <button class="btn" id="btn-people">All people</button>
     <button class="btn" id="btn-gedcom">Export</button>
     <button class="btn primary" id="btn-add">Add person</button>
@@ -584,6 +615,7 @@ function render(){
     document.getElementById("mh-title").textContent = "The " + people[rootId].surname + " Family Record";
 
   if(view === "review"){ canvas.innerHTML = reviewHTML(); return; }
+  if(view === "timeline"){ canvas.innerHTML = timelineHTML(); return; }
 
   if(!all.length || !rootId || !people[rootId]){
     canvas.innerHTML = '<div class="startcard"><h2>Start with yourself</h2>' +
@@ -666,6 +698,198 @@ function reviewHTML(){
     });
   }
   return h + '</div>';
+}
+
+
+/* ---------- timeline ----------
+   Every date we hold, all three families in one run. Births and deaths come
+   straight off the person; a marriage is read out of its own citation, because
+   the index gives a quarter rather than a day. */
+var TL_MONTHS = {january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,
+  september:9,october:10,november:11,december:12,jan:1,feb:2,mar:3,apr:4,jun:6,
+  jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+var TL_QUARTER = {mar:3,jun:6,sep:9,dec:12};
+var TL_NAMES = ["","January","February","March","April","May","June","July",
+  "August","September","October","November","December"];
+
+function tlWhen(dateStr, yearStr){
+  var s = (dateStr||"").toString().trim(), m;
+  if(s){
+    m = s.match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4})$/);
+    if(m) return {y:+m[3], m:+m[2], d:+m[1], exact:true,
+                  txt:(+m[1])+" "+TL_NAMES[+m[2]]+" "+m[3]};
+    m = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+    if(m && TL_MONTHS[m[2].toLowerCase()])
+      return {y:+m[3], m:TL_MONTHS[m[2].toLowerCase()], d:+m[1], exact:true,
+              txt:(+m[1])+" "+TL_NAMES[TL_MONTHS[m[2].toLowerCase()]]+" "+m[3]};
+    m = s.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if(m && TL_MONTHS[m[1].toLowerCase()])
+      return {y:+m[2], m:TL_MONTHS[m[1].toLowerCase()], d:0, exact:false, txt:s};
+    m = s.match(/(\d{4})/);
+    if(m) return {y:+m[1], m:0, d:0, exact:false, txt:s};
+  }
+  var y = parseInt((yearStr||"").toString().replace(/\D/g,""),10);
+  return y ? {y:y, m:0, d:0, exact:false, txt:String(y)} : null;
+}
+
+function tlMarriage(p){
+  var found = null;
+  (p.sources||[]).forEach(function(s){
+    if(found || !/marriage/i.test(s.kind||"")) return;
+    var t = s.text || "", m = t.match(/\b(Mar|Jun|Sep|Dec)\w*\s+quarter\s+(\d{4})/i);
+    if(m){
+      var q = TL_QUARTER[m[1].slice(0,3).toLowerCase()];
+      found = {y:+m[2], m:q, d:0, exact:false,
+               txt:m[1].slice(0,3)+" quarter "+m[2], ref:tlRef(t)};
+      return;
+    }
+    m = t.match(/\b(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\b/);
+    if(m && TL_MONTHS[m[2].toLowerCase()])
+      found = {y:+m[3], m:TL_MONTHS[m[2].toLowerCase()], d:+m[1], exact:true,
+               txt:(+m[1])+" "+TL_NAMES[TL_MONTHS[m[2].toLowerCase()]]+" "+m[3], ref:tlRef(t)};
+  });
+  return found;
+}
+function tlRef(t){
+  var m = (t||"").match(/vol(?:ume)?\s*([0-9a-z]+)\s*,?\s*page\s*(\d+)/i);
+  return m ? (m[1]+"/"+m[2]).toLowerCase() : "";
+}
+
+/* Which of the three families does someone belong to? Anyone who shares an
+   ancestor with the seed counts, which picks up brothers, sisters, nieces and
+   nephews as well as the direct line. Married-in partners inherit the side
+   they married into. */
+function tlFamilyName(p){
+  if(!p) return "";
+  return ((p.maiden||"").trim() || (p.surname||"").trim());
+}
+function tlBranches(){
+  var r = people[rootId];
+  if(!r) return [];
+  var dad = r.fatherId && people[r.fatherId] ? people[r.fatherId] : null;
+  var mum = r.motherId && people[r.motherId] ? people[r.motherId] : null;
+  var out = [];
+  function add(key, seedId, who, rel){
+    if(!seedId || !people[seedId]) return;
+    var nm = tlFamilyName(people[seedId]);
+    out.push({ key:key, seed:seedId,
+               label: esc((nm ? nm + " \u2014 " : "") + who + "\u2019s " + rel) });
+  }
+  if(dad){
+    add("green", dad.fatherId, (dad.given||"his"), "father");
+    add("stock", dad.motherId, (dad.given||"his"), "mother");
+  }
+  if(mum) add("kirsty", mum.id, (mum.given||"her"), "family");
+  return out;
+}
+function tlAnc(id, acc){
+  acc = acc || {};
+  if(!id || acc[id]) return acc;
+  acc[id] = 1;
+  var p = people[id];
+  if(p){ tlAnc(p.fatherId, acc); tlAnc(p.motherId, acc); }
+  return acc;
+}
+function tlBranchResolver(){
+  var sets = tlBranches().map(function(b){ return {b:b, set:tlAnc(b.seed)}; });
+  var cache = {};
+  function resolve(id, guard){
+    if(!id || !people[id]) return null;
+    if(Object.prototype.hasOwnProperty.call(cache, id)) return cache[id];
+    guard = guard || {};
+    if(guard[id]) return null;
+    guard[id] = 1;
+    var mine = tlAnc(id), hit = null;
+    for(var i=0; i<sets.length && !hit; i++)
+      for(var k in mine) if(sets[i].set[k]){ hit = sets[i].b; break; }
+    if(!hit){
+      var partner = partnerOf(people[id]);
+      if(partner) hit = resolve(partner.id, guard);
+    }
+    if(!hit){
+      var kids = childrenOf(id);
+      for(var j=0; j<kids.length && !hit; j++) hit = resolve(kids[j].id, guard);
+    }
+    cache[id] = hit;
+    return hit;
+  }
+  return resolve;
+}
+
+function timelineHTML(){
+  var resolve = tlBranchResolver(), ev = [], seenMarriage = {};
+
+  list().forEach(function(p){
+    var b = tlWhen(p.birthDate, p.birthYear);
+    if(b) ev.push({w:b, kind:"born", p:p});
+    var d = tlWhen(p.deathDate, p.deathYear);
+    if(d) ev.push({w:d, kind:"died", p:p});
+    var m = tlMarriage(p);
+    if(m){
+      var other = partnerOf(p);
+      var key = "m|" + (m.ref || (m.y + "-" + m.m + "-" +
+        [p.id, other ? other.id : ""].sort().join("+")));
+      if(!seenMarriage[key]){ seenMarriage[key] = 1; ev.push({w:m, kind:"married", p:p, other:other}); }
+    }
+  });
+
+  if(!ev.length)
+    return '<div class="empty">No dates yet. Add a birth or death year to anyone and they will appear here.</div>';
+
+  ev.sort(function(a,b){
+    return a.w.y - b.w.y || a.w.m - b.w.m || a.w.d - b.w.d ||
+           fullName(a.p).localeCompare(fullName(b.p));
+  });
+
+  var h = '<div class="tl">' +
+    '<div class="genlabel">Timeline &mdash; every date we hold, all three families in order</div>' +
+    '<div class="tl-key">';
+  tlBranches().forEach(function(b){
+    h += '<span><i class="' + b.key + '"></i>' + b.label + '</span>';
+  });
+  h += '</div>';
+
+  var decade = null;
+  ev.forEach(function(e){
+    var dec = Math.floor(e.w.y / 10) * 10;
+    if(dec !== decade){
+      if(decade !== null) h += '</ol>';
+      decade = dec;
+      h += '<div class="tl-decade">' + dec + 's</div><ol class="tl-list">';
+    }
+    var br = resolve(e.p.id);
+    var link = function(x){
+      return '<a href="#" data-open="' + x.id + '">' + esc(fullName(x)) + '</a>';
+    };
+    var what;
+    if(e.kind === "born"){
+      what = link(e.p) + ' born' +
+        (e.p.birthPlace ? ' <span class="tl-place">&middot; ' + esc(e.p.birthPlace) + '</span>' : '');
+    } else if(e.kind === "died"){
+      var age = "";
+      var by = parseInt(e.p.birthYear, 10);
+      if(by && e.w.y > by) age = ' <span class="tl-place">&middot; aged about ' + (e.w.y - by) + '</span>';
+      what = link(e.p) + ' died' +
+        (e.p.deathPlace ? ' <span class="tl-place">&middot; ' + esc(e.p.deathPlace) + '</span>' : age);
+    } else {
+      what = link(e.p) + ' married ' +
+        (e.other ? link(e.other) : '<span class="tl-place">someone we have not named yet</span>');
+    }
+    if(!e.w.exact) what += '<span class="tl-approx">approx</span>';
+    h += '<li class="tl-row' + (br ? ' ' + br.key : '') + '">' +
+      '<div class="tl-when">' + esc(e.w.txt) + '</div>' +
+      '<div class="tl-what">' + what + '</div></li>';
+  });
+  if(decade !== null) h += '</ol>';
+  return h + '</div>';
+}
+
+function setView(v){
+  view = v;
+  var r = document.getElementById("btn-review"), t = document.getElementById("btn-timeline");
+  if(r) r.textContent = v === "review"   ? "Back to tree" : "Review queue";
+  if(t) t.textContent = v === "timeline" ? "Back to tree" : "Timeline";
+  render();
 }
 
 /* ---------- drawer ---------- */
@@ -821,7 +1045,7 @@ function sourcesHTML(d){
   h += '<label class="fl" for="s-kind">Add evidence</label><select id="s-kind">' +
     ["Birth","Marriage","Death","Census","Probate","Military","Newspaper","Parish","Other"]
       .map(function(k){ return '<option>' + k + '</option>'; }).join("") + '</select>';
-  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: GREEN, Derek P. Mother&rsquo;s maiden name BATTERSBY. Leigh, Dec quarter 1928, vol 8c page 313."></textarea>';
+  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: SURNAME, First name. Mother&rsquo;s maiden name MAIDENNAME. District, Dec quarter 1928, vol 8c page 313."></textarea>';
   h += '<div class="dactions"><button class="btn primary" id="s-add">Add evidence</button></div>';
   return h;
 }
@@ -940,11 +1164,8 @@ document.addEventListener("click", function(ev){
   else if(id === "btn-gedcom") exportGedcom();
   else if(id === "btn-people") showPeople();
   else if(id === "whoami") askWho();
-  else if(id === "btn-review"){
-    view = view === "review" ? "tree" : "review";
-    document.getElementById("btn-review").textContent = view === "review" ? "Back to tree" : "Review queue";
-    render();
-  }
+  else if(id === "btn-review"){ setView(view === "review" ? "tree" : "review"); }
+  else if(id === "btn-timeline"){ setView(view === "timeline" ? "tree" : "timeline"); }
 });
 document.addEventListener("keydown", function(e){
   if(e.key === "Escape" && document.getElementById("drawer").classList.contains("open")) closeDrawer();
