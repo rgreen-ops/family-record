@@ -281,6 +281,11 @@ textarea{min-height:74px;resize:vertical}
   .tl-what{font-size:13.5px}
 }
 
+.focusbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--radius);padding:9px 12px;margin:0 0 16px;font-size:13px;color:var(--ink-soft)}
+.focusbar b{color:var(--ink)}
+
 /* `hidden` must beat any display rule below, or the panel never goes away. */
 [hidden]{display:none !important}
 #gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--ground)}
@@ -376,6 +381,16 @@ textarea{min-height:74px;resize:vertical}
 "use strict";
 
 var people = {}, questions = {}, rootId = null, db = null, sb = null, session = null;
+var focusId = null;   /* whose tree is on screen; local to this browser */
+try{ focusId = localStorage.getItem("family_record_focus") || null; }catch(e){}
+function curRoot(){ return (focusId && people[focusId]) ? focusId : rootId; }
+function setFocus(id){
+  focusId = (id && id !== rootId) ? id : null;
+  try{ focusId ? localStorage.setItem("family_record_focus", focusId)
+               : localStorage.removeItem("family_record_focus"); }catch(e){}
+  view = "tree"; render();
+  var c = document.getElementById("canvas"); if(c) c.scrollTop = 0;
+}
 var selId = null, editId = null, pending = null, tab = "facts", draft = null;
 var view = "tree";
 var LS = "ricoman_family_tree_v2", LSNAME = "ricoman_family_who";
@@ -629,7 +644,7 @@ function render(){
   document.getElementById("s-people").textContent = all.length;
   document.getElementById("s-verified").textContent = all.filter(function(p){ return statusOf(p)==="verified"; }).length;
   document.getElementById("s-todo").textContent = all.filter(function(p){ return statusOf(p)!=="verified"; }).length;
-  document.getElementById("s-gens").textContent = rootId ? depthOf(rootId) : 0;
+  document.getElementById("s-gens").textContent = curRoot() ? depthOf(curRoot()) : 0;
 
   if(rootId && people[rootId] && people[rootId].surname)
     document.getElementById("mh-title").textContent = "The " + people[rootId].surname + " Family Record";
@@ -637,16 +652,16 @@ function render(){
   if(view === "review"){ canvas.innerHTML = reviewHTML(); return; }
   if(view === "timeline"){ canvas.innerHTML = timelineHTML(); return; }
 
-  if(!all.length || !rootId || !people[rootId]){
+  if(!all.length || !curRoot() || !people[curRoot()]){
     canvas.innerHTML = '<div class="startcard"><h2>Start with yourself</h2>' +
       '<p>Every trail runs backwards from someone you can place exactly. Add yourself, then your parents — ' +
       'the empty slots on the chart are how you keep going.</p>' +
       '<button class="btn primary" data-firstadd="1">Add the first person</button></div>';
     return;
   }
-  canvas.innerHTML = '<div id="zoomwrap">' + householdHTML() +
+  canvas.innerHTML = focusBarHTML() + '<div id="zoomwrap">' + householdHTML() +
     '<div><div class="genlabel">Pedigree — ancestors read left to right</div>' +
-    '<div class="chart">' + nodeHTML(rootId, 0, 7) + '</div></div></div>';
+    '<div class="chart">' + nodeHTML(curRoot(), 0, 7) + '</div></div></div>';
   applyZoom();
 }
 
@@ -675,8 +690,17 @@ function fitAll(){
   setZoom(need > have ? have / need : 1);
 }
 
+function focusBarHTML(){
+  if(!focusId || !people[focusId] || focusId === rootId) return "";
+  var back = people[rootId];
+  return '<div class="focusbar"><span>Showing <b>' + esc(fullName(people[focusId])) +
+    '</b>&rsquo;s family</span>' +
+    (back ? '<button class="btn sm" data-unfocus="1">Back to ' + esc(back.given || "the start") + '</button>' : '') +
+    '</div>';
+}
+
 function householdHTML(){
-  var r = people[rootId]; if(!r) return "";
+  var r = people[curRoot()]; if(!r) return "";
   var sp = partnerOf(r), kids = childrenOf(r.id);
   if(!sp && !kids.length){
     return '<div class="household"><div class="genlabel">Household</div>' +
@@ -961,7 +985,7 @@ function drawDrawer(){
     ? (pending ? "New " + pending.role : "New person") : fullName(d);
   document.getElementById("d-eyebrow").textContent = isNew
     ? (pending ? (fullName(people[pending.childId]) + "’s " + pending.role) : "Adding to the tree")
-    : (d.id === rootId ? "Root of the tree" : (d.addedBy ? "Added by " + d.addedBy : "Person"));
+    : (d.id === curRoot() ? "The chart is centred on them" : (d.addedBy ? "Added by " + d.addedBy : "Person"));
   if(isNew) tab = "facts";
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
     t.classList.toggle("on", t.dataset.tab === tab);
@@ -1035,7 +1059,7 @@ function factsHTML(d, isNew){
   if(!isNew) h += '<div class="hintnote" style="margin-top:16px">Changes save themselves as you type — no need to press anything.</div>';
   h += '<div class="dactions"><button class="btn primary" id="f-save">' + (isNew ? "Add to tree" : "Save now") + '</button>';
   if(!isNew){
-    if(d.id !== rootId) h += '<button class="btn" id="f-root">Centre tree on them</button>';
+    if(d.id !== curRoot()) h += '<button class="btn primary" id="f-root">See their family tree</button>';
     h += '<button class="btn danger" id="f-del">Remove</button>';
   }
   h += '</div>';
@@ -1149,7 +1173,8 @@ function showText(text, name){
 
 /* ---------- events ---------- */
 document.addEventListener("click", function(ev){
-  var t = ev.target.closest ? ev.target.closest("[data-open],[data-slot],[data-partner],[data-child],[data-rel],[data-firstadd],[data-delsrc],[data-st],.tab") : null;
+  var t = ev.target.closest ? ev.target.closest("[data-open],[data-slot],[data-partner],[data-child],[data-rel],[data-firstadd],[data-delsrc],[data-st],[data-unfocus],.tab") : null;
+  if(t && t.dataset.unfocus){ setFocus(null); return; }
   if(t && t.dataset.rel){ openNew(t.dataset.rel, t.dataset.of); return; }
   if(t && t.dataset.open){
     ev.preventDefault();
@@ -1174,7 +1199,7 @@ document.addEventListener("click", function(ev){
   var id = ev.target.id;
   if(id === "f-save") doSave();
   else if(id === "f-del") doDelete();
-  else if(id === "f-root"){ rootId = editId; saveMeta(); closeDrawer(); }
+  else if(id === "f-root"){ var t = editId; closeDrawer(); setFocus(t); }
   else if(id === "s-add") doAddSource();
   else if(id === "d-close" || id === "scrim") closeDrawer();
   else if(id === "btn-add"){ openNew(null,null); }
