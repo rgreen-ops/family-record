@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>The Green Family Record</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --ground:#EAEBE7; --surface:#FCFCFB; --surface-2:#F2F3EF;
+  --ink:#1B2028; --ink-soft:#434B57; --muted:#6E7480;
+  --line:#C9CBC5; --line-soft:#DDDEDA;
+  --accent:#8E3122; --accent-soft:#F0E2DE;
+  --male:#3C5A6B; --female:#7A4A63;
+  --ok:#3B6B4A; --ok-soft:#DFEAE1;
+  --warn:#8A6414; --warn-soft:#F2E9D4;
+  --shadow:0 1px 2px rgba(27,32,40,.07),0 6px 18px rgba(27,32,40,.06);
+  --radius:3px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#13171D; --surface:#1C222A; --surface-2:#232A33;
+    --ink:#E4E7E4; --ink-soft:#B4BBC2; --muted:#8A929C;
+    --line:#333C47; --line-soft:#2A323B;
+    --accent:#D97B65; --accent-soft:#3A2721;
+    --male:#7FA8BD; --female:#C08FA9;
+    --ok:#84B591; --ok-soft:#1E2C23;
+    --warn:#D7B05A; --warn-soft:#2E2716;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#13171D; --surface:#1C222A; --surface-2:#232A33;
+  --ink:#E4E7E4; --ink-soft:#B4BBC2; --muted:#8A929C;
+  --line:#333C47; --line-soft:#2A323B;
+  --accent:#D97B65; --accent-soft:#3A2721;
+  --male:#7FA8BD; --female:#C08FA9;
+  --ok:#84B591; --ok-soft:#1E2C23;
+  --warn:#D7B05A; --warn-soft:#2E2716;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+
+.masthead{border-bottom:2px solid var(--ink);background:var(--surface);
+  padding:16px 22px 13px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.masthead h1{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:29px;
+  line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.masthead .sub{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.mh-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:7px 13px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .12s}
+.btn:hover{border-color:var(--ink-soft)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.primary:hover{opacity:.88}
+.btn.danger{color:var(--accent)}
+.btn.sm{padding:5px 10px;font-size:12px}
+
+.whoami{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+  border:1px dashed var(--line);border-radius:var(--radius);padding:5px 9px;cursor:pointer}
+.whoami:hover{border-color:var(--accent);color:var(--accent)}
+
+.bar{display:flex;align-items:center;gap:14px;padding:9px 22px;background:var(--surface-2);
+  border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:13px}
+.stat{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:baseline}
+.stat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+.bar .spacer{flex:1}
+.status{font-family:"IBM Plex Mono",monospace;font-size:11px;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted)}
+.status.saving{color:var(--warn)}
+.status.saved{color:var(--ok)}
+
+.banner{background:var(--warn-soft);border-bottom:1px solid var(--line);
+  padding:10px 22px;font-size:13px;color:var(--ink-soft)}
+.banner b{color:var(--ink)}
+
+.canvas{padding:28px 22px 60px;overflow-x:auto}
+.chart{display:inline-flex;min-width:100%}
+.node{display:flex;align-items:center}
+.node>.card-wrap{display:flex;align-items:center;position:relative}
+
+.card{width:216px;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--line);border-radius:var(--radius);padding:9px 11px;
+  cursor:pointer;box-shadow:var(--shadow);text-align:left;display:block;position:relative;
+  transition:border-color .12s,transform .12s}
+.card:hover{transform:translateY(-1px)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card.m{border-left-color:var(--male)}
+.card.f{border-left-color:var(--female)}
+.card.sel{border-color:var(--ink);box-shadow:0 0 0 2px var(--accent-soft),var(--shadow)}
+.card .nm{font-family:"Newsreader",Georgia,serif;font-size:17px;font-weight:500;line-height:1.2;text-wrap:balance}
+.card .sn{text-transform:uppercase;letter-spacing:.02em;font-size:15px}
+.card .dt{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);
+  margin-top:3px;font-variant-numeric:tabular-nums}
+.card .pl{font-size:11.5px;color:var(--muted);margin-top:1px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-family:"IBM Plex Mono",monospace;
+  font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;
+  border-radius:2px;margin-top:6px;font-weight:500}
+.chip.verified{background:var(--ok-soft);color:var(--ok)}
+.chip.family{background:var(--warn-soft);color:var(--warn)}
+.chip.checking{background:var(--accent-soft);color:var(--accent)}
+
+.slot{width:216px;border:1px dashed var(--line);border-radius:var(--radius);background:transparent;
+  color:var(--muted);padding:11px;font-size:12.5px;cursor:pointer;text-align:left;
+  transition:border-color .12s,color .12s}
+.slot:hover{border-color:var(--accent);color:var(--accent)}
+.slot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.slot .plus{font-family:"IBM Plex Mono",monospace;margin-right:6px}
+
+.parents{display:flex;flex-direction:column;gap:14px;position:relative;padding-left:46px}
+.parents::before{content:"";position:absolute;left:23px;top:25%;bottom:25%;border-left:1px solid var(--line)}
+.branch{position:relative}
+.branch::before{content:"";position:absolute;left:-23px;top:50%;width:23px;border-top:1px solid var(--line)}
+.stem{width:23px;border-top:1px solid var(--line)}
+.genlabel{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.household{border:1px solid var(--line);border-left:3px solid var(--ink);border-radius:var(--radius);
+  background:var(--surface-2);padding:14px 16px 16px;margin-bottom:30px;max-width:920px}
+.hh-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.hh-couple{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hh-amp{font-family:"Newsreader",Georgia,serif;font-size:20px;color:var(--muted)}
+.sibs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:5px 0 0 6px;max-width:216px}
+.sibs-lbl{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-right:2px}
+.sib{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:2px;
+  padding:2px 6px;font-size:11px;cursor:pointer;color:var(--ink-soft)}
+.sib i{font-family:"IBM Plex Mono",monospace;font-style:normal;font-size:9.5px;color:var(--muted)}
+.sib:hover{border-color:var(--accent);color:var(--accent)}
+.relbox{border:1px solid var(--line);border-radius:var(--radius);padding:4px 12px 10px;
+  background:var(--surface-2);margin-bottom:6px}
+
+.scrim{position:fixed;inset:0;background:rgba(20,24,30,.34);opacity:0;pointer-events:none;
+  transition:opacity .18s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);
+  border-left:1px solid var(--line);z-index:50;transform:translateX(100%);
+  transition:transform .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;
+  box-shadow:-10px 0 30px rgba(20,24,30,.12)}
+.drawer.open{transform:none}
+@media (prefers-reduced-motion:reduce){.drawer,.scrim,.card{transition:none}}
+.drawer header{padding:16px 18px 12px;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.drawer header h2{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:22px;
+  margin:0;line-height:1.15;text-wrap:balance}
+.drawer header .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.x{background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:2px 4px}
+.x:hover{color:var(--ink)}
+.dbody{overflow-y:auto;padding:16px 18px 30px;flex:1}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 18px}
+.tab{background:none;border:none;padding:9px 11px;font-size:13px;font-weight:500;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+label.fl{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+input[type=text],select,textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--radius);padding:7px 9px;font-size:14px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+textarea{min-height:74px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hintnote{font-size:12px;color:var(--muted);margin-top:4px}
+.dactions{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+
+.statusbox{border:1px solid var(--line);border-radius:var(--radius);padding:11px 12px;
+  margin-bottom:6px;background:var(--surface-2)}
+.statusbox .lbl{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.statusbox .opts{display:flex;gap:6px;flex-wrap:wrap}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:2px;
+  padding:5px 9px;font-size:12px;cursor:pointer}
+.opt.on{border-color:var(--ink);font-weight:600}
+.opt.verified.on{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.opt.family.on{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.opt.checking.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
+.srcline{display:flex;gap:8px;align-items:flex-start;padding:8px 0;
+  border-bottom:1px solid var(--line-soft);font-size:13px}
+.srcline .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);width:66px;flex:none;padding-top:2px}
+.srcline .v{flex:1;word-break:break-word}
+.srcline button{background:none;border:none;color:var(--muted);cursor:pointer;padding:0 2px}
+.srcline button:hover{color:var(--accent)}
+.empty{border:1px dashed var(--line);border-radius:var(--radius);padding:16px;
+  color:var(--muted);font-size:13px;text-align:center}
+
+.rec{display:block;border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--radius);padding:10px 12px;margin-bottom:9px;text-decoration:none;
+  color:inherit;background:var(--surface-2)}
+.rec:hover{border-color:var(--ink-soft)}
+.rec .rt{font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rec .rt span{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--accent);white-space:nowrap}
+.rec .rd{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+.qrow{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+.qrow .qn{font-family:"Newsreader",Georgia,serif;font-size:16px;font-weight:500}
+.qrow .qm{font-size:12.5px;color:var(--muted);margin-top:3px}
+.qrow.checking{border-left-color:var(--accent)}
+.qactions{display:flex;gap:6px;margin-top:8px}
+
+.startcard{max-width:600px;margin:36px auto;background:var(--surface);border:1px solid var(--line);
+  border-top:3px solid var(--accent);border-radius:var(--radius);padding:24px 26px;box-shadow:var(--shadow)}
+.startcard h2{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:24px;margin:0 0 6px}
+.startcard p{color:var(--ink-soft);margin:0 0 14px;max-width:62ch}
+
+@media (max-width:640px){
+  .masthead{padding:13px 15px 11px}
+  .masthead h1{font-size:23px}
+  .bar,.banner{padding:8px 15px;gap:10px}
+  .canvas{padding:18px 15px 50px}
+  .card,.slot{width:180px}
+  .parents{padding-left:34px;gap:10px}
+  .parents::before{left:17px}
+  .branch::before{left:-17px;width:17px}
+  .drawer{width:100%}
+}
+
+#gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--ground)}
+.gatecard{max-width:430px;width:100%;background:var(--surface);border:1px solid var(--line);
+  border-top:3px solid var(--accent);border-radius:var(--radius);padding:30px 30px 26px;box-shadow:var(--shadow)}
+.gatecard h1{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:30px;margin:0 0 8px;letter-spacing:-.01em}
+.gatecard .lead{color:var(--ink-soft);margin:0 0 22px;font-size:14px}
+.gate-msg{font-size:12.5px;color:var(--muted);margin:14px 0 0}
+#signed-as{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+</style>
+
+</head>
+<body>
+
+<div id="gate" hidden>
+  <div class="gatecard">
+    <h1>The Family Record</h1>
+    <p class="lead">A private family tree for the Green, Stockdale, Dolan, McDonnell and Martin families.
+       Only people who have been added to the family list can get in.</p>
+    <label class="fl" for="gate-email">Your email address</label>
+    <input type="text" id="gate-email" placeholder="you@example.com" autocomplete="email">
+    <button class="btn primary" id="send-link" style="margin-top:12px">Email me a sign-in link</button>
+    <p class="gate-msg" id="gate-msg">No password to remember &mdash; we email you a link that signs you straight in.</p>
+  </div>
+</div>
+<div id="app" hidden>
+<div class="masthead">
+  <div>
+    <h1 id="mh-title">The Green Family Record</h1>
+    <div class="sub" id="mh-sub">A shared family tree &middot; every fact marked verified or unverified</div>
+  </div>
+  <div class="mh-actions">
+    <span id="signed-as"></span>
+    <button class="btn" id="sign-out">Sign out</button>
+    <button class="whoami" id="whoami">Sign your name</button>
+    <button class="btn" id="btn-questions">Questions <span id="q-count"></span></button>
+    <button class="btn" id="btn-review">Review queue</button>
+    <button class="btn" id="btn-people">All people</button>
+    <button class="btn" id="btn-gedcom">Export</button>
+    <button class="btn primary" id="btn-add">Add person</button>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="stat">People <b id="s-people">0</b></div>
+  <div class="stat">Verified <b id="s-verified">0</b></div>
+  <div class="stat">Needs checking <b id="s-todo">0</b></div>
+  <div class="stat">Generations <b id="s-gens">0</b></div>
+  <div class="spacer"></div>
+  <div class="status" id="status">Loading…</div>
+</div>
+
+<div class="banner" id="banner">
+  <b>Adding what you know?</b> Put in anything you remember, even if you are unsure &mdash; mark it
+  <b>Family memory</b> and it goes on the review list to be checked against the records. Nothing you add overwrites anyone else's work.
+</div>
+
+<div class="canvas" id="canvas"></div>
+
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <header>
+    <div>
+      <div class="eyebrow" id="d-eyebrow">Person</div>
+      <h2 id="d-title">&nbsp;</h2>
+    </div>
+    <button class="x" id="d-close" aria-label="Close">&times;</button>
+  </header>
+  <div class="tabs" id="tabbar">
+    <button class="tab on" data-tab="facts">Facts</button>
+    <button class="tab" data-tab="records">Find records</button>
+    <button class="tab" data-tab="sources">Evidence</button>
+  </div>
+  <div class="dbody" id="dbody"></div>
+</aside>
+
+<script>
+"use strict";
+
+var people = {}, questions = {}, rootId = null, db = null, sb = null, session = null;
+var selId = null, editId = null, pending = null, tab = "facts", draft = null;
+var view = "tree";
+var LS = "ricoman_family_tree_v2", LSNAME = "ricoman_family_who";
+var who = "";
+
+function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function list(){ return Object.keys(people).map(function(k){ return people[k]; }); }
+
+function blank(){
+  return { id:uid(), given:"", middle:"", surname:"", maiden:"", knownAs:"", sex:"",
+           birthDate:"", birthYear:"", birthPlace:"",
+           deathDate:"", deathYear:"", deathPlace:"",
+           occupation:"", notes:"", fatherId:null, motherId:null,
+           spouseId:null, sources:[], status:"family", addedBy:who || "", updatedAt:"" };
+}
+
+function setStatus(t, cls){
+  var el = document.getElementById("status");
+  el.textContent = t; el.className = "status" + (cls ? " " + cls : "");
+}
+
+/* ---------- identity (typed, remembered locally) ---------- */
+function loadWho(){
+  try{ who = localStorage.getItem(LSNAME) || ""; }catch(e){ who = ""; }
+  var b = document.getElementById("whoami");
+  b.textContent = who ? ("Signed in as " + who) : "Sign your name";
+}
+function askWho(){
+  var n = prompt("Your name — so the family can see who added what:", who || "");
+  if(n === null) return;
+  who = n.trim();
+  try{ localStorage.setItem(LSNAME, who); }catch(e){}
+  loadWho();
+}
+
+/* ---------- persistence: one document per person ---------- */
+function saveLocal(){
+  try{ localStorage.setItem(LS, JSON.stringify({people:people, rootId:rootId})); }catch(e){}
+}
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(LS); if(!raw) return false;
+    var d = JSON.parse(raw);
+    if(d && d.people){ people = d.people; rootId = d.rootId || null; return true; }
+  }catch(e){}
+  return false;
+}
+
+function savePerson(p){
+  p.updatedAt = new Date().toISOString();
+  if(who) p.addedBy = p.addedBy || who;
+  p.lastEditedBy = who || p.lastEditedBy || "";
+  people[p.id] = p;
+  saveLocal(); render();
+  if(!sb) return;
+  setStatus("Saving…","saving");
+  sb.from("people").upsert({ id:p.id, data:p, updated_at:new Date().toISOString(),
+                             updated_by: who || (session && session.user && session.user.email) || "" })
+    .then(function(r){
+      if(r.error){ console.error(r.error); setStatus("Not saved — " + r.error.message, ""); }
+      else setStatus("Saved","saved");
+    });
+}
+function deletePerson(id){
+  delete people[id];
+  saveLocal(); render();
+  if(sb) sb.from("people").delete().eq("id", id).then(function(){});
+}
+function saveMeta(){
+  if(!sb) return;
+  sb.from("meta").upsert({ id:"tree", data:{ rootId:rootId } }).then(function(){});
+}
+
+function pullAll(){
+  if(!sb) return;
+  sb.from("people").select("id,data").then(function(r){
+    if(r.error){ setStatus("Cannot read — " + r.error.message, ""); return; }
+    var next = {};
+    (r.data||[]).forEach(function(row){ if(row.data && row.data.id) next[row.data.id] = row.data; });
+    if(Object.keys(next).length){ people = next; saveLocal(); }
+    setStatus("Shared — live","saved");
+    render();
+  });
+  sb.from("meta").select("id,data").eq("id","tree").then(function(r){
+    if(!r.error && r.data && r.data[0] && r.data[0].data && r.data[0].data.rootId){
+      rootId = r.data[0].data.rootId; render();
+    }
+  });
+}
+
+function connect(){
+  if(!sb){ setStatus("Local only",""); return; }
+  pullAll();
+  sb.channel("people-live")
+    .on("postgres_changes", { event:"*", schema:"public", table:"people" }, function(payload){
+      if(payload.eventType === "DELETE"){
+        if(payload.old && payload.old.id){ delete people[payload.old.id]; render(); }
+        return;
+      }
+      var d = payload["new"] && payload["new"].data;
+      if(d && d.id){ people[d.id] = d; saveLocal(); render(); }
+    }).subscribe();
+}
+
+/* ---------- helpers ---------- */
+function fullName(p){
+  if(!p) return "Unknown";
+  var n = (p.given||"").trim(), m = (p.middle||"").trim(), s = (p.surname||"").trim();
+  if(!n && !s) return "Unknown";
+  return (n + " " + (m ? m + " " : "") + s).replace(/\s+/g," ").trim();
+}
+function displaySurname(p){
+  var s = (p.surname||"").trim();
+  if(p.maiden && p.maiden.trim() && p.maiden.trim().toUpperCase() !== s.toUpperCase())
+    return s + " (née " + p.maiden.trim() + ")";
+  return s;
+}
+function lifespan(p){
+  var b = (p.birthYear||"").toString().trim(), d = (p.deathYear||"").toString().trim();
+  if(!b && !d) return "";
+  return (b || "?") + "–" + d;
+}
+function statusOf(p){ return p.status || (p.sources && p.sources.length ? "verified" : "family"); }
+function childrenOf(id){
+  return list().filter(function(c){ return c.fatherId === id || c.motherId === id; })
+    .sort(function(a,b){ return (parseInt(a.birthYear,10)||9999) - (parseInt(b.birthYear,10)||9999); });
+}
+function siblingsOf(id){
+  var p = people[id]; if(!p) return [];
+  if(!p.fatherId && !p.motherId) return [];
+  return list().filter(function(c){
+    if(c.id === id) return false;
+    return (p.fatherId && c.fatherId === p.fatherId) || (p.motherId && c.motherId === p.motherId);
+  }).sort(function(a,b){ return (parseInt(a.birthYear,10)||9999) - (parseInt(b.birthYear,10)||9999); });
+}
+function partnerOf(p){
+  if(!p) return null;
+  if(p.spouseId && people[p.spouseId]) return people[p.spouseId];
+  var mine = childrenOf(p.id), other = null;
+  mine.forEach(function(c){
+    var id = c.fatherId === p.id ? c.motherId : c.fatherId;
+    if(id && people[id]) other = people[id];
+  });
+  return other;
+}
+function depthOf(id, seen){
+  seen = seen || {};
+  if(!id || seen[id]) return 0;
+  seen[id] = 1;
+  var p = people[id]; if(!p) return 0;
+  return 1 + Math.max(p.fatherId ? depthOf(p.fatherId,seen) : 0, p.motherId ? depthOf(p.motherId,seen) : 0);
+}
+
+/* ---------- record leads ---------- */
+function leads(p){
+  var out = [], q = encodeURIComponent;
+  var given = (p.given||"").trim(), sur = (p.surname||"").trim(), maiden = (p.maiden||"").trim();
+  var by = parseInt(p.birthYear,10), dy = parseInt(p.deathYear,10);
+  if(!sur && !given) return out;
+
+  out.push({ t:"Birth, marriage & death index", s:"FreeBMD",
+    d:"The free index. On a birth it gives the MOTHER'S MAIDEN NAME, which is how whole families get identified at once.",
+    u:"https://www.freebmd.org.uk/cgi/search.pl" });
+
+  if(by && by < 1939 && (!dy || dy >= 1939)){
+    out.push({ t:"1939 Register", s:"FindMyPast",
+      d:"Taken Sept 1939. Exact dates of birth and the whole household under one roof.",
+      u:"https://search.findmypast.co.uk/search-world-Records/1939-register?lastname=" + q(sur) + "&firstname=" + q(given) });
+  }
+  if(by && by <= 1921){
+    out.push({ t:"Census returns", s:"FamilySearch",
+      d:"Address, occupation and every person in the house. The richest single record for building out a generation.",
+      u:"https://www.familysearch.org/search/record/results?q.surname=" + q(sur) + "&q.givenName=" + q(given) + "&f.recordCountry=England" });
+  }
+  if(maiden){
+    out.push({ t:"Search under maiden name " + maiden, s:"FamilySearch",
+      d:"Married women are indexed under their maiden name before marriage.",
+      u:"https://www.familysearch.org/search/record/results?q.surname=" + q(maiden) + "&q.givenName=" + q(given) + "&f.recordCountry=England" });
+  }
+  if(dy && dy >= 1858){
+    out.push({ t:"Probate / find a will", s:"GOV.UK",
+      d:"Exact death date, last address and who proved the will. Free to search.",
+      u:"https://probatesearch.service.gov.uk/" });
+  }
+  out.push({ t:"Local newspapers", s:"British Newspaper Archive",
+    d:"Marriage notices, obituaries, inquests — where a family stops being names and dates.",
+    u:"https://www.britishnewspaperarchive.co.uk/search/results?basicsearch=" + q(given + " " + sur) });
+  return out;
+}
+
+/* ---------- chart ---------- */
+function cardHTML(p){
+  var cls = "card " + (p.sex === "M" ? "m" : p.sex === "F" ? "f" : "");
+  if(p.id === selId) cls += " sel";
+  var st = statusOf(p), span = lifespan(p);
+  var place = (p.birthPlace || p.deathPlace || "").trim();
+  var lbl = st === "verified" ? "Verified" : st === "checking" ? "Check this" : "Family memory";
+  return '<button class="' + cls + '" data-open="' + p.id + '">' +
+    '<div class="nm">' + esc(p.given || "—") + ' <span class="sn">' + esc(displaySurname(p)) + '</span></div>' +
+    (span ? '<div class="dt">' + esc(span) + '</div>' : '') +
+    (place ? '<div class="pl">' + esc(place) + '</div>' : '') +
+    '<span class="chip ' + st + '">' + lbl + '</span></button>';
+}
+function slotHTML(childId, role){
+  return '<button class="slot" data-slot="' + childId + '" data-role="' + role + '">' +
+    '<span class="plus">+</span>Add ' + role + '</button>';
+}
+function sibsHTML(id){
+  var s = siblingsOf(id);
+  if(!s.length) return "";
+  return '<div class="sibs"><span class="sibs-lbl">with</span>' + s.map(function(x){
+    return '<button class="sib" data-open="' + x.id + '">' + esc(x.given || "?") +
+      (x.birthYear ? ' <i>' + esc(x.birthYear) + '</i>' : '') + '</button>';
+  }).join("") + '</div>';
+}
+
+function nodeHTML(id, depth, maxDepth){
+  var p = people[id]; if(!p) return "";
+  var html = '<div class="node"><div class="card-wrap"><div>' + cardHTML(p) + sibsHTML(id) + '</div></div>';
+  if(depth >= maxDepth){
+    if(p.fatherId || p.motherId) html += '<div class="stem"></div>';
+    return html + '</div>';
+  }
+  var fa = p.fatherId ? people[p.fatherId] : null, mo = p.motherId ? people[p.motherId] : null;
+  html += '<div class="parents">';
+  html += '<div class="branch">' + (fa ? nodeHTML(fa.id, depth+1, maxDepth) : slotHTML(p.id,"father")) + '</div>';
+  html += '<div class="branch">' + (mo ? nodeHTML(mo.id, depth+1, maxDepth) : slotHTML(p.id,"mother")) + '</div>';
+  html += '</div>';
+  return html + '</div>';
+}
+
+function render(){
+  var canvas = document.getElementById("canvas"), all = list();
+  document.getElementById("s-people").textContent = all.length;
+  document.getElementById("s-verified").textContent = all.filter(function(p){ return statusOf(p)==="verified"; }).length;
+  document.getElementById("s-todo").textContent = all.filter(function(p){ return statusOf(p)!=="verified"; }).length;
+  document.getElementById("s-gens").textContent = rootId ? depthOf(rootId) : 0;
+
+  if(rootId && people[rootId] && people[rootId].surname)
+    document.getElementById("mh-title").textContent = "The " + people[rootId].surname + " Family Record";
+
+  if(view === "review"){ canvas.innerHTML = reviewHTML(); return; }
+
+  if(!all.length || !rootId || !people[rootId]){
+    canvas.innerHTML = '<div class="startcard"><h2>Start with yourself</h2>' +
+      '<p>Every trail runs backwards from someone you can place exactly. Add yourself, then your parents — ' +
+      'the empty slots on the chart are how you keep going.</p>' +
+      '<button class="btn primary" data-firstadd="1">Add the first person</button></div>';
+    return;
+  }
+  canvas.innerHTML = householdHTML() +
+    '<div><div class="genlabel">Pedigree — ancestors read left to right</div>' +
+    '<div class="chart">' + nodeHTML(rootId, 0, 7) + '</div></div>';
+}
+
+function householdHTML(){
+  var r = people[rootId]; if(!r) return "";
+  var sp = partnerOf(r), kids = childrenOf(r.id);
+  if(!sp && !kids.length){
+    return '<div class="household"><div class="genlabel">Household</div>' +
+      '<button class="slot" data-partner="' + r.id + '"><span class="plus">+</span>Add ' +
+      esc(r.given || "their") + '’s partner</button></div>';
+  }
+  var h = '<div class="household"><div class="genlabel">Household — ' + esc(fullName(r));
+  if(sp) h += ' &amp; ' + esc(fullName(sp));
+  h += '</div><div class="hh-row">';
+  h += '<div class="hh-couple">' + cardHTML(r) +
+       (sp ? '<span class="hh-amp">&amp;</span>' + cardHTML(sp)
+           : '<span class="hh-amp">&amp;</span><button class="slot" data-partner="' + r.id +
+             '"><span class="plus">+</span>Add partner</button>') + '</div>';
+  h += '</div>';
+  h += '<div class="hh-kids"><div class="genlabel" style="margin:14px 0 8px">Children</div><div class="hh-row">';
+  kids.forEach(function(k){ h += cardHTML(k); });
+  h += '<button class="slot" data-child="' + r.id + '"><span class="plus">+</span>Add a child</button>';
+  h += '</div></div></div>';
+  return h;
+}
+
+function reviewHTML(){
+  var todo = list().filter(function(p){ return statusOf(p) !== "verified"; })
+    .sort(function(a,b){ return (statusOf(a)==="checking"?0:1) - (statusOf(b)==="checking"?0:1); });
+  var h = '<div style="max-width:760px;margin:0 auto">' +
+    '<div class="genlabel">Review queue — everything not yet confirmed against a record</div>';
+  if(!todo.length){
+    h += '<div class="empty">Nothing waiting. Every person in the tree is backed by a record.</div>';
+  } else {
+    h += '<p class="hintnote" style="margin:0 0 14px">' + todo.length +
+      ' to check. Anything marked <b>Check this</b> has been flagged as a question for the records.</p>';
+    todo.forEach(function(p){
+      var st = statusOf(p);
+      h += '<div class="qrow ' + st + '"><div class="qn">' + esc(fullName(p)) +
+        (lifespan(p) ? ' <span style="font-family:IBM Plex Mono,monospace;font-size:12px;color:var(--muted)">' + esc(lifespan(p)) + '</span>' : '') +
+        '</div><div class="qm">' + esc((p.notes||"").slice(0,190) || "No detail yet.") +
+        (p.addedBy ? ' — added by ' + esc(p.addedBy) : '') + '</div>' +
+        '<div class="qactions"><button class="btn sm" data-open="' + p.id + '">Open</button></div></div>';
+    });
+  }
+  return h + '</div>';
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(id){
+  editId = id; selId = id; draft = null;
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("drawer").setAttribute("aria-hidden","false");
+  document.getElementById("scrim").classList.add("open");
+  drawDrawer(); render();
+}
+function openNew(role, childId){
+  editId = null; draft = blank(); pending = role ? {childId:childId, role:role} : null;
+  if(role === "father" || role === "mother"){
+    draft.sex = role === "father" ? "M" : "F";
+    var ch = people[childId];
+    if(role === "father" && ch && ch.surname) draft.surname = ch.surname;
+  } else if(role === "child"){
+    var par = people[childId];
+    if(par && par.surname) draft.surname = par.surname;
+  } else if(role === "partner"){
+    var pr = people[childId];
+    if(pr && pr.sex) draft.sex = pr.sex === "M" ? "F" : "M";
+  } else if(role === "sibling"){
+    var sb = people[childId];
+    if(sb){
+      draft.surname = sb.surname || "";
+      draft.fatherId = sb.fatherId || null;
+      draft.motherId = sb.motherId || null;
+    }
+  }
+  tab = "facts";
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("scrim").classList.add("open");
+  drawDrawer();
+}
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("drawer").setAttribute("aria-hidden","true");
+  document.getElementById("scrim").classList.remove("open");
+  editId = null; pending = null; selId = null; draft = null;
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){ t.style.display = ""; });
+  render();
+}
+
+function drawDrawer(){
+  var isNew = !editId, d = isNew ? draft : people[editId];
+  if(!d){ closeDrawer(); return; }
+  document.getElementById("d-title").textContent = isNew
+    ? (pending ? "New " + pending.role : "New person") : fullName(d);
+  document.getElementById("d-eyebrow").textContent = isNew
+    ? (pending ? (fullName(people[pending.childId]) + "’s " + pending.role) : "Adding to the tree")
+    : (d.id === rootId ? "Root of the tree" : (d.addedBy ? "Added by " + d.addedBy : "Person"));
+  if(isNew) tab = "facts";
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.classList.toggle("on", t.dataset.tab === tab);
+    t.style.display = isNew && t.dataset.tab !== "facts" ? "none" : "";
+  });
+  var body = document.getElementById("dbody");
+  body.innerHTML = tab === "facts" ? factsHTML(d, isNew)
+                 : tab === "records" ? recordsHTML(d) : sourcesHTML(d);
+}
+
+function relativesHTML(d){
+  var fa = d.fatherId && people[d.fatherId], mo = d.motherId && people[d.motherId];
+  var sp = partnerOf(d), kids = childrenOf(d.id), sibs = siblingsOf(d.id);
+  function line(lbl, who2, addRole){
+    var v = who2 ? ('<a href="#" data-open="' + who2.id + '" style="color:var(--ink);font-weight:500;text-decoration:none">' +
+                    esc(fullName(who2)) + '</a>')
+                 : ('<button class="btn sm" data-rel="' + addRole + '" data-of="' + d.id + '">Add ' + lbl.toLowerCase() + '</button>');
+    return '<div class="srcline"><div class="k">' + lbl + '</div><div class="v">' + v + '</div></div>';
+  }
+  var h = '<div class="relbox">';
+  h += line("Father", fa, "father");
+  h += line("Mother", mo, "mother");
+  h += line("Partner", sp, "partner");
+  h += '<div class="srcline"><div class="k">Siblings</div><div class="v">' +
+       (sibs.length ? sibs.map(function(s){ return '<a href="#" data-open="' + s.id +
+         '" style="color:var(--ink);text-decoration:none">' + esc(fullName(s)) + '</a>'; }).join(", ") + ' &middot; '
+        : '') + '<button class="btn sm" data-rel="sibling" data-of="' + d.id + '">Add sibling</button></div></div>';
+  h += '<div class="srcline"><div class="k">Children</div><div class="v">' +
+       (kids.length ? kids.map(function(s){ return '<a href="#" data-open="' + s.id +
+         '" style="color:var(--ink);text-decoration:none">' + esc(fullName(s)) + '</a>'; }).join(", ") + ' &middot; '
+        : '') + '<button class="btn sm" data-rel="child" data-of="' + d.id + '">Add child</button></div></div>';
+  return h + '</div>';
+}
+
+function factsHTML(d, isNew){
+  var st = statusOf(d), h = "";
+  h += '<div class="statusbox"><div class="lbl">How sure are we?</div><div class="opts">' +
+    '<button class="opt verified' + (st==="verified"?" on":"") + '" data-st="verified">Verified from a record</button>' +
+    '<button class="opt family' + (st==="family"?" on":"") + '" data-st="family">Family memory</button>' +
+    '<button class="opt checking' + (st==="checking"?" on":"") + '" data-st="checking">Please check this</button>' +
+    '</div><div class="hintnote">Only mark <b>Verified</b> when there is an index reference or certificate in the Evidence tab.</div></div>';
+
+  if(!isNew) h += relativesHTML(d);
+
+  h += '<div class="row2">';
+  h += '<div><label class="fl" for="f-given">First name</label><input type="text" id="f-given" value="' + esc(d.given) + '" placeholder="William"></div>';
+  h += '<div><label class="fl" for="f-middle">Middle name(s)</label><input type="text" id="f-middle" value="' + esc(d.middle||"") + '" placeholder="Henry"></div>';
+  h += '</div><div class="row2">';
+  h += '<div><label class="fl" for="f-surname">Surname</label><input type="text" id="f-surname" value="' + esc(d.surname) + '" placeholder="Green"></div>';
+  h += '<div><label class="fl" for="f-knownas">Known as</label><input type="text" id="f-knownas" value="' + esc(d.knownAs||"") + '" placeholder="Bill, Renée…"></div>';
+  h += '</div><div class="row2">';
+  h += '<div><label class="fl" for="f-sex">Sex</label><select id="f-sex"><option value="">—</option>' +
+       '<option value="M"' + (d.sex==="M"?" selected":"") + '>Male</option>' +
+       '<option value="F"' + (d.sex==="F"?" selected":"") + '>Female</option></select></div>';
+  h += '<div><label class="fl" for="f-maiden">Maiden name</label><input type="text" id="f-maiden" value="' + esc(d.maiden) + '" placeholder="if married"></div>';
+  h += '</div><div class="hintnote">Record women under their maiden name — every index before their marriage uses it.</div>';
+
+  h += '<label class="fl" for="f-bdate">Born</label><div class="row2">';
+  h += '<input type="text" id="f-bdate" value="' + esc(d.birthDate||"") + '" placeholder="Full date if known, e.g. 25/03/1989">';
+  h += '<input type="text" id="f-by" value="' + esc(d.birthYear) + '" placeholder="Year only" inputmode="numeric"></div>';
+  h += '<input type="text" id="f-bp" value="' + esc(d.birthPlace) + '" placeholder="Town or registration district" style="margin-top:10px">';
+
+  h += '<label class="fl" for="f-ddate">Died</label><div class="row2">';
+  h += '<input type="text" id="f-ddate" value="' + esc(d.deathDate||"") + '" placeholder="Full date if known">';
+  h += '<input type="text" id="f-dy" value="' + esc(d.deathYear) + '" placeholder="Year, blank if living" inputmode="numeric"></div>';
+  h += '<input type="text" id="f-dp" value="' + esc(d.deathPlace) + '" placeholder="Town or district" style="margin-top:10px">';
+
+  h += '<label class="fl" for="f-occ">Occupation</label><input type="text" id="f-occ" value="' + esc(d.occupation) + '" placeholder="As stated on a census or certificate">';
+  h += '<label class="fl" for="f-notes">What you know</label><textarea id="f-notes" placeholder="Anything at all — addresses, jobs, stories, who they married, things you are unsure about.">' + esc(d.notes) + '</textarea>';
+
+  if(!isNew) h += '<div class="hintnote" style="margin-top:16px">Changes save themselves as you type — no need to press anything.</div>';
+  h += '<div class="dactions"><button class="btn primary" id="f-save">' + (isNew ? "Add to tree" : "Save now") + '</button>';
+  if(!isNew){
+    if(d.id !== rootId) h += '<button class="btn" id="f-root">Centre tree on them</button>';
+    h += '<button class="btn danger" id="f-del">Remove</button>';
+  }
+  h += '</div>';
+  if(!isNew && d.lastEditedBy) h += '<div class="hintnote" style="margin-top:12px">Last edited by ' + esc(d.lastEditedBy) + '.</div>';
+  return h;
+}
+
+function recordsHTML(d){
+  var ls = leads(d);
+  if(!ls.length) return '<div class="empty">Add a surname and a birth year and the record leads appear here.</div>';
+  var h = '<p class="hintnote" style="margin:0 0 14px">Searches worth running for ' + esc(fullName(d)) + '. Each opens in a new tab.</p>';
+  ls.forEach(function(l){
+    h += '<a class="rec" href="' + esc(l.u) + '" target="_blank" rel="noopener noreferrer">' +
+      '<div class="rt">' + esc(l.t) + '<span>' + esc(l.s) + '</span></div>' +
+      '<div class="rd">' + esc(l.d) + '</div></a>';
+  });
+  return h;
+}
+
+function sourcesHTML(d){
+  var h = '<p class="hintnote" style="margin:0 0 12px">A fact without a source is a rumour. Record what each one actually proves — an index reference is ideal (district, quarter, volume, page).</p>';
+  if(!d.sources || !d.sources.length) h += '<div class="empty">No evidence yet.</div>';
+  else d.sources.forEach(function(s,i){
+    h += '<div class="srcline"><div class="k">' + esc(s.kind || "Note") + '</div><div class="v">' + esc(s.text) +
+      '</div><button data-delsrc="' + i + '" aria-label="Remove">&times;</button></div>';
+  });
+  h += '<label class="fl" for="s-kind">Add evidence</label><select id="s-kind">' +
+    ["Birth","Marriage","Death","Census","Probate","Military","Newspaper","Parish","Other"]
+      .map(function(k){ return '<option>' + k + '</option>'; }).join("") + '</select>';
+  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: GREEN, Derek P. Mother&rsquo;s maiden name BATTERSBY. Leigh, Dec quarter 1928, vol 8c page 313."></textarea>';
+  h += '<div class="dactions"><button class="btn primary" id="s-add">Add evidence</button></div>';
+  return h;
+}
+
+/* ---------- people list ---------- */
+function showPeople(){
+  var all = list().sort(function(a,b){
+    return (a.surname||"").localeCompare(b.surname||"") || (a.given||"").localeCompare(b.given||""); });
+  editId = null; pending = null; draft = null;
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("scrim").classList.add("open");
+  document.getElementById("d-eyebrow").textContent = "Everyone in the tree";
+  document.getElementById("d-title").textContent = all.length + (all.length === 1 ? " person" : " people");
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){ t.style.display = "none"; });
+  var h = all.length ? "" : '<div class="empty">Nobody yet.</div>';
+  all.forEach(function(p){
+    h += '<div class="srcline"><div class="k">' + esc(lifespan(p) || "—") + '</div><div class="v">' +
+      '<a href="#" data-open="' + p.id + '" style="text-decoration:none;color:var(--ink);font-weight:500">' +
+      esc(fullName(p)) + '</a> <span class="chip ' + statusOf(p) + '" style="margin:0 0 0 4px">' +
+      (statusOf(p)==="verified"?"Verified":statusOf(p)==="checking"?"Check":"Memory") + '</span>' +
+      '<div style="font-size:12px;color:var(--muted)">' + esc(p.birthPlace || p.occupation || "") + '</div></div></div>';
+  });
+  document.getElementById("dbody").innerHTML = h;
+}
+
+/* ---------- GEDCOM ---------- */
+function gedcom(){
+  var all = list(), idx = {}; all.forEach(function(p,i){ idx[p.id] = i+1; });
+  var L = ["0 HEAD","1 SOUR FAMILY_RECORD","1 GEDC","2 VERS 5.5.1","2 FORM LINEAGE-LINKED","1 CHAR UTF-8"];
+  var fams = {}, order = [];
+  all.forEach(function(c){
+    if(!c.fatherId && !c.motherId) return;
+    var k = (c.fatherId||"-") + "|" + (c.motherId||"-");
+    if(!fams[k]){ fams[k] = {f:c.fatherId,m:c.motherId,kids:[]}; order.push(k); }
+    fams[k].kids.push(c.id);
+  });
+  all.forEach(function(p){
+    L.push("0 @I" + idx[p.id] + "@ INDI");
+    L.push("1 NAME " + (p.given||"") + " /" + (p.maiden || p.surname || "") + "/");
+    if(p.sex) L.push("1 SEX " + p.sex);
+    if(p.birthYear || p.birthPlace){ L.push("1 BIRT");
+      if(p.birthYear) L.push("2 DATE ABT " + p.birthYear);
+      if(p.birthPlace) L.push("2 PLAC " + p.birthPlace); }
+    if(p.deathYear || p.deathPlace){ L.push("1 DEAT");
+      if(p.deathYear) L.push("2 DATE ABT " + p.deathYear);
+      if(p.deathPlace) L.push("2 PLAC " + p.deathPlace); }
+    if(p.occupation) L.push("1 OCCU " + p.occupation);
+    if(p.notes) L.push("1 NOTE " + p.notes.replace(/\r?\n/g," "));
+    (p.sources||[]).forEach(function(s){ L.push("1 NOTE " + s.kind + ": " + s.text.replace(/\r?\n/g," ")); });
+    order.forEach(function(k,i){
+      if(fams[k].f === p.id || fams[k].m === p.id) L.push("1 FAMS @F" + (i+1) + "@");
+      if(fams[k].kids.indexOf(p.id) >= 0) L.push("1 FAMC @F" + (i+1) + "@");
+    });
+  });
+  order.forEach(function(k,i){
+    var f = fams[k]; L.push("0 @F" + (i+1) + "@ FAM");
+    if(f.f && idx[f.f]) L.push("1 HUSB @I" + idx[f.f] + "@");
+    if(f.m && idx[f.m]) L.push("1 WIFE @I" + idx[f.m] + "@");
+    f.kids.forEach(function(c){ if(idx[c]) L.push("1 CHIL @I" + idx[c] + "@"); });
+  });
+  L.push("0 TRLR");
+  return L.join("\n");
+}
+function exportGedcom(){
+  var text = gedcom();
+  var name = ((rootId && people[rootId] && people[rootId].surname) || "family") + "-tree.ged";
+  try{
+    var blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }catch(e){ showText(text, name); }
+}
+function showText(text, name){
+  var w = window.open("","_blank");
+  if(w){ w.document.write("<pre style='font:12px ui-monospace,monospace;white-space:pre-wrap'>" +
+    text.replace(/[&<]/g,function(c){ return c === "&" ? "&amp;" : "&lt;"; }) + "</pre>"); w.document.title = name; }
+  else alert(text.slice(0,2000));
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", function(ev){
+  var t = ev.target.closest ? ev.target.closest("[data-open],[data-slot],[data-partner],[data-child],[data-rel],[data-firstadd],[data-delsrc],[data-st],.tab") : null;
+  if(t && t.dataset.rel){ openNew(t.dataset.rel, t.dataset.of); return; }
+  if(t && t.dataset.open){
+    ev.preventDefault();
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(x){ x.style.display = ""; });
+    tab = "facts"; openDrawer(t.dataset.open); return;
+  }
+  if(t && t.dataset.slot){ openNew(t.dataset.role, t.dataset.slot); return; }
+  if(t && t.dataset.partner){ openNew("partner", t.dataset.partner); return; }
+  if(t && t.dataset.child){ openNew("child", t.dataset.child); return; }
+  if(t && t.dataset.firstadd){ openNew(null,null); return; }
+  if(t && t.dataset.delsrc && editId){
+    people[editId].sources.splice(parseInt(t.dataset.delsrc,10),1);
+    savePerson(people[editId]); drawDrawer(); return;
+  }
+  if(t && t.dataset.st){
+    var target = editId ? people[editId] : draft;
+    if(target){ target.status = t.dataset.st; if(editId) savePerson(target); drawDrawer(); }
+    return;
+  }
+  if(t && t.classList.contains("tab")){ tab = t.dataset.tab; drawDrawer(); return; }
+
+  var id = ev.target.id;
+  if(id === "f-save") doSave();
+  else if(id === "f-del") doDelete();
+  else if(id === "f-root"){ rootId = editId; saveMeta(); closeDrawer(); }
+  else if(id === "s-add") doAddSource();
+  else if(id === "d-close" || id === "scrim") closeDrawer();
+  else if(id === "btn-add"){ openNew(null,null); }
+  else if(id === "btn-gedcom") exportGedcom();
+  else if(id === "btn-people") showPeople();
+  else if(id === "whoami") askWho();
+  else if(id === "btn-review"){
+    view = view === "review" ? "tree" : "review";
+    document.getElementById("btn-review").textContent = view === "review" ? "Back to tree" : "Review queue";
+    render();
+  }
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && document.getElementById("drawer").classList.contains("open")) closeDrawer();
+});
+
+function val(id){ var e = document.getElementById(id); return e ? e.value.trim() : ""; }
+
+function applyFields(p){
+  if(!document.getElementById("f-given")) return false;
+  p.given = val("f-given"); p.middle = val("f-middle"); p.surname = val("f-surname");
+  p.maiden = val("f-maiden"); p.knownAs = val("f-knownas"); p.sex = val("f-sex");
+  p.birthDate = val("f-bdate"); p.deathDate = val("f-ddate");
+  p.birthYear = val("f-by").replace(/[^0-9]/g,"");
+  p.deathYear = val("f-dy").replace(/[^0-9]/g,"");
+  var yb = (p.birthDate.match(/(1[6-9]\d\d|20\d\d)/) || [])[0];
+  if(!p.birthYear && yb) p.birthYear = yb;
+  var yd = (p.deathDate.match(/(1[6-9]\d\d|20\d\d)/) || [])[0];
+  if(!p.deathYear && yd) p.deathYear = yd;
+  p.birthPlace = val("f-bp"); p.deathPlace = val("f-dp");
+  p.occupation = val("f-occ"); p.notes = val("f-notes");
+  return true;
+}
+
+/* autosave: any edit to an existing person saves itself */
+var autoTimer = null;
+function onFieldEdit(ev){
+  if(!editId || !people[editId]) return;
+  var el = ev.target;
+  if(!el || !el.id || !/^f-/.test(el.id)) return;
+  if(!el.closest || !el.closest("#dbody")) return;
+  clearTimeout(autoTimer);
+  setStatus("Saving…","saving");
+  autoTimer = setTimeout(function(){
+    var p = people[editId]; if(!p) return;
+    if(applyFields(p)){
+      savePerson(p);
+      var t = document.getElementById("d-title");
+      if(t) t.textContent = fullName(p);
+    }
+  }, 600);
+}
+document.addEventListener("input", onFieldEdit);
+document.addEventListener("change", onFieldEdit);
+
+function doSave(){
+  var isNew = !editId, p = isNew ? draft : people[editId];
+  if(!applyFields(p)) return;
+  if(!p.given && !p.surname){ alert("Give them at least a forename or a surname."); return; }
+
+  if(isNew){
+    if(!p.status) p.status = "family";
+    p.addedBy = who;
+    savePerson(p);
+    if(!rootId){ rootId = p.id; saveMeta(); }
+    if(pending && (pending.role === "father" || pending.role === "mother")){
+      var child = people[pending.childId];
+      if(child){
+        if(pending.role === "father") child.fatherId = p.id; else child.motherId = p.id;
+        savePerson(child);
+      }
+    }
+    if(pending && pending.role === "partner"){
+      var me = people[pending.childId];
+      if(me){ me.spouseId = p.id; savePerson(me); }
+      p.spouseId = pending.childId; savePerson(p);
+    }
+    if(pending && pending.role === "child"){
+      var par = people[pending.childId];
+      if(par){
+        if(par.sex === "F"){ p.motherId = par.id; if(par.spouseId) p.fatherId = par.spouseId; }
+        else { p.fatherId = par.id; if(par.spouseId) p.motherId = par.spouseId; }
+        savePerson(p);
+      }
+    }
+    draft = null; pending = null;
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(x){ x.style.display = ""; });
+    tab = "records"; openDrawer(p.id);
+    return;
+  }
+  savePerson(p); drawDrawer();
+}
+
+function doDelete(){
+  if(!editId) return;
+  var p = people[editId];
+  if(!confirm("Remove " + fullName(p) + "? Their ancestors stay but become unlinked.")) return;
+  list().forEach(function(c){
+    var ch = false;
+    if(c.fatherId === editId){ c.fatherId = null; ch = true; }
+    if(c.motherId === editId){ c.motherId = null; ch = true; }
+    if(ch) savePerson(c);
+  });
+  var wasRoot = rootId === editId;
+  deletePerson(editId);
+  if(wasRoot){ rootId = list().length ? list()[0].id : null; saveMeta(); }
+  closeDrawer();
+}
+
+function doAddSource(){
+  if(!editId) return;
+  var text = val("s-text"); if(!text) return;
+  var p = people[editId];
+  if(!p.sources) p.sources = [];
+  p.sources.push({ kind: val("s-kind") || "Other", text:text, by:who });
+  savePerson(p); drawDrawer();
+}
+
+/* ---------- auth + boot ---------- */
+function showGate(msg){
+  document.getElementById("gate").hidden = false;
+  document.getElementById("app").hidden = true;
+  if(msg) document.getElementById("gate-msg").textContent = msg;
+}
+function showApp(){
+  document.getElementById("gate").hidden = true;
+  document.getElementById("app").hidden = false;
+}
+
+function boot(){
+  loadWho(); loadLocal(); render();
+
+  if(!window.SUPABASE_URL || /YOUR_/.test(window.SUPABASE_URL)){
+    showGate("This app has not been connected to its database yet. Edit config.js with your Supabase URL and anon key.");
+    return;
+  }
+  sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+  sb.auth.getSession().then(function(r){
+    session = r.data.session;
+    if(session){ onSignedIn(); } else { showGate(); }
+  });
+  sb.auth.onAuthStateChange(function(_e, s){
+    session = s;
+    if(s){ onSignedIn(); } else { showGate(); }
+  });
+}
+
+function onSignedIn(){
+  showApp();
+  var em = (session && session.user && session.user.email) || "";
+  if(!who && em){ who = em.split("@")[0]; try{ localStorage.setItem(LSNAME, who); }catch(e){} loadWho(); }
+  document.getElementById("signed-as").textContent = em;
+  connect();
+}
+
+document.getElementById("send-link").addEventListener("click", function(){
+  var email = document.getElementById("gate-email").value.trim();
+  if(!email){ document.getElementById("gate-msg").textContent = "Put your email address in first."; return; }
+  document.getElementById("gate-msg").textContent = "Sending…";
+  sb.auth.signInWithOtp({ email: email, options:{ emailRedirectTo: location.href.split("#")[0] } })
+    .then(function(r){
+      document.getElementById("gate-msg").textContent = r.error
+        ? ("Could not send: " + r.error.message)
+        : "Check your email — there is a sign-in link waiting. It expires in an hour.";
+    });
+});
+document.getElementById("gate-email").addEventListener("keydown", function(e){
+  if(e.key === "Enter") document.getElementById("send-link").click();
+});
+document.getElementById("sign-out").addEventListener("click", function(){
+  if(sb) sb.auth.signOut();
+});
+
+boot();
+</script>
+
+</body>
+</html>
