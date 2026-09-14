@@ -153,6 +153,9 @@ a{color:var(--accent)}
   border-bottom:1px dotted var(--line)}
 .siblink:hover{color:var(--accent);border-bottom-color:var(--accent)}
 .siblink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.siblink i{font-family:"IBM Plex Mono",monospace;font-style:normal;font-size:9.5px;color:var(--muted)}
+.sibs.also{margin-top:6px}
+.sibs.also .sib{border-color:var(--line);font-style:italic}
 .sibs-lbl{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--muted);margin-right:2px}
 .sib{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:2px;
@@ -624,17 +627,49 @@ function sibsHTML(id){
   return h + '</div>';
 }
 
-function nodeHTML(id, depth, maxDepth){
+/* Everyone this person had a child with or is recorded as married to. */
+function partnersOf(p){
+  var seen = {}, out = [];
+  function add(x){ if(x && x.id !== p.id && !seen[x.id]){ seen[x.id] = 1; out.push(x); } }
+  if(p.spouseId && people[p.spouseId]) add(people[p.spouseId]);
+  list().forEach(function(x){ if(x.spouseId === p.id) add(x); });
+  childrenOf(p.id).forEach(function(c){
+    var oid = c.fatherId === p.id ? c.motherId : c.fatherId;
+    if(oid && people[oid]) add(people[oid]);
+  });
+  return out;
+}
+
+/* The partners NOT already drawn beside this person on the chart, each with
+   the children of that marriage - so a half-sister is never invisible. */
+function alsoHTML(p, drawnPartnerId){
+  var others = partnersOf(p).filter(function(x){ return x.id !== drawnPartnerId; });
+  if(!others.length) return "";
+  var h = '<div class="sibs also"><span class="sibs-lbl">also</span>';
+  others.forEach(function(x){
+    var kids = childrenOf(p.id).filter(function(c){ return c.fatherId === x.id || c.motherId === x.id; });
+    h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">&amp; ' + esc(fullName(x)) + '</button>';
+    if(kids.length) h += '<span class="sibfam">' + kids.map(function(k){
+      return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") +
+        (k.birthYear ? ' <i>' + esc(k.birthYear) + '</i>' : '') + '</button>';
+    }).join(', ') + '</span>';
+    h += '</span>';
+  });
+  return h + '</div>';
+}
+
+function nodeHTML(id, depth, maxDepth, drawnPartnerId){
   var p = people[id]; if(!p) return "";
-  var html = '<div class="node"><div class="card-wrap"><div>' + cardHTML(p) + sibsHTML(id) + '</div></div>';
+  if(drawnPartnerId === undefined){ var pp = partnerOf(p); drawnPartnerId = pp ? pp.id : null; }
+  var html = '<div class="node"><div class="card-wrap"><div>' + cardHTML(p) + alsoHTML(p, drawnPartnerId) + sibsHTML(id) + '</div></div>';
   if(depth >= maxDepth){
     if(p.fatherId || p.motherId) html += '<div class="stem"></div>';
     return html + '</div>';
   }
   var fa = p.fatherId ? people[p.fatherId] : null, mo = p.motherId ? people[p.motherId] : null;
   html += '<div class="parents">';
-  html += '<div class="branch">' + (fa ? nodeHTML(fa.id, depth+1, maxDepth) : slotHTML(p.id,"father")) + '</div>';
-  html += '<div class="branch">' + (mo ? nodeHTML(mo.id, depth+1, maxDepth) : slotHTML(p.id,"mother")) + '</div>';
+  html += '<div class="branch">' + (fa ? nodeHTML(fa.id, depth+1, maxDepth, mo ? mo.id : null) : slotHTML(p.id,"father")) + '</div>';
+  html += '<div class="branch">' + (mo ? nodeHTML(mo.id, depth+1, maxDepth, fa ? fa.id : null) : slotHTML(p.id,"mother")) + '</div>';
   html += '</div>';
   return html + '</div>';
 }
@@ -714,7 +749,7 @@ function householdHTML(){
        (sp ? '<span class="hh-amp">&amp;</span>' + cardHTML(sp)
            : '<span class="hh-amp">&amp;</span><button class="slot" data-partner="' + r.id +
              '"><span class="plus">+</span>Add partner</button>') + '</div>';
-  h += '</div>';
+  h += '</div>' + alsoHTML(r, sp ? sp.id : null);
   h += '<div class="hh-kids"><div class="genlabel" style="margin:14px 0 8px">Children</div><div class="hh-row">';
   kids.forEach(function(k){ h += cardHTML(k); });
   h += '<button class="slot" data-child="' + r.id + '"><span class="plus">+</span>Add a child</button>';
