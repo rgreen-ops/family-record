@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<title>The Green Family Record</title>
+<title>The Family Record</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 
@@ -250,7 +250,7 @@ textarea{min-height:74px;resize:vertical}
 <div id="gate" hidden>
   <div class="gatecard">
     <h1>The Family Record</h1>
-    <p class="lead">A private family tree for the Green, Stockdale, Dolan, McDonnell and Martin families.
+    <p class="lead">A private family tree.
        Only people who have been added to the family list can get in.</p>
     <label class="fl" for="gate-email">Your email address</label>
     <input type="text" id="gate-email" placeholder="you@example.com" autocomplete="email">
@@ -261,7 +261,7 @@ textarea{min-height:74px;resize:vertical}
 <div id="app" hidden>
 <div class="masthead">
   <div>
-    <h1 id="mh-title">The Green Family Record</h1>
+    <h1 id="mh-title">The Family Record</h1>
     <div class="sub" id="mh-sub">A shared family tree &middot; every fact marked verified or unverified</div>
   </div>
   <div class="mh-actions">
@@ -317,7 +317,7 @@ textarea{min-height:74px;resize:vertical}
 var people = {}, questions = {}, rootId = null, db = null, sb = null, session = null;
 var selId = null, editId = null, pending = null, tab = "facts", draft = null;
 var view = "tree";
-var LS = "ricoman_family_tree_v2", LSNAME = "ricoman_family_who";
+var LS = "family_record_tree_v2", LSNAME = "family_record_who";
 var who = "";
 
 function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -770,7 +770,7 @@ function sourcesHTML(d){
   h += '<label class="fl" for="s-kind">Add evidence</label><select id="s-kind">' +
     ["Birth","Marriage","Death","Census","Probate","Military","Newspaper","Parish","Other"]
       .map(function(k){ return '<option>' + k + '</option>'; }).join("") + '</select>';
-  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: GREEN, Derek P. Mother&rsquo;s maiden name BATTERSBY. Leigh, Dec quarter 1928, vol 8c page 313."></textarea>';
+  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: SURNAME, Forename. Mother&rsquo;s maiden name ______. District, Dec quarter 1928, vol 8c page 313."></textarea>';
   h += '<div class="dactions"><button class="btn primary" id="s-add">Add evidence</button></div>';
   return h;
 }

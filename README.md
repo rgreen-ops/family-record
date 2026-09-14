@@ -1,6 +1,6 @@
 # The Family Record
 
-A private family tree for the Green, Stockdale, Dolan, McDonnell and Martin families.
+A private, shared family tree.
 
 Sign-in is by emailed link — no passwords. Only email addresses on the family
 list can see or change anything; everyone else gets nothing, whatever they try.
@@ -16,7 +16,7 @@ list can see or change anything; everyone else gets nothing, whatever they try.
    them down so only the family list can read or write.
 
 3. **Add the family.** At the bottom of `schema.sql` there is an `allowed_emails`
-   list. Add a line per person — Kirsty, your mum, anyone else — and Run it again.
+   list. Add a line per person and Run it again.
    Adding someone here is the *only* way anyone gets access.
 
 4. **Connect the app.** In Supabase go to **Project Settings → API** and copy two

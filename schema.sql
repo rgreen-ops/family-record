@@ -60,11 +60,6 @@ alter publication supabase_realtime add table people;
 --     Add a line per person, then press Run again.
 -- =====================================================================
 insert into allowed_emails (email, note) values
-  ('rgreen@ricoman.com', 'Richard')
+  ('you@example.com',      'me'),
+  ('someone@example.com',  'add a line per family member')
 on conflict (email) do nothing;
-
--- Examples — uncomment and edit:
--- insert into allowed_emails (email, note) values
---   ('kirsty@example.com', 'Kirsty'),
---   ('mum@example.com',    'Barbara')
--- on conflict (email) do nothing;
