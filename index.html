@@ -271,6 +271,7 @@ textarea{min-height:74px;resize:vertical}
   </div>
   <div class="mh-actions">
     <span id="signed-as"></span>
+    <button class="btn" id="set-pw">Set password</button>
     <button class="btn" id="sign-out">Sign out</button>
     <button class="whoami" id="whoami">Sign your name</button>
     <button class="btn" id="btn-questions">Questions <span id="q-count"></span></button>
@@ -1055,7 +1056,15 @@ function passwordSignIn(){
     if(/invalid login credentials/i.test(r.error.message || "")){
       gateMsg("Setting your account up…");
       sb.auth.signUp({ email: email, password: pass }).then(function(s){
-        if(s.error){ gateMsg(s.error.message); return; }
+        if(s.error){
+          if(/already registered/i.test(s.error.message || "")){
+            gateMsg("There is already an account for that address, but that is not its password. " +
+                    "Use the sign-in link below — then you can set the family password from inside the app.");
+          } else {
+            gateMsg(s.error.message);
+          }
+          return;
+        }
         if(s.data && s.data.session) return;              // straight in
         sb.auth.signInWithPassword({ email: email, password: pass }).then(function(t){
           if(t.error) gateMsg("Account made, but sign-in did not take: " + t.error.message);
@@ -1087,6 +1096,19 @@ document.getElementById("send-link").addEventListener("click", function(e){
 });
 document.getElementById("sign-out").addEventListener("click", function(){
   if(sb) sb.auth.signOut();
+});
+
+/* Set or change the password on your own account, once signed in. */
+document.getElementById("set-pw").addEventListener("click", function(){
+  if(!sb || !session){ return; }
+  var p1 = prompt("Set the family password for " + (session.user && session.user.email) + ":");
+  if(p1 === null) return;
+  p1 = p1.trim();
+  if(p1.length < 6){ alert("Make it at least 6 characters."); return; }
+  sb.auth.updateUser({ password: p1 }).then(function(r){
+    alert(r.error ? ("Could not change it: " + r.error.message)
+                  : "Done. Use that password from now on.");
+  });
 });
 
 boot();
