@@ -161,6 +161,9 @@ a{color:var(--accent)}
 .sib{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:2px;
   padding:2px 6px;font-size:11px;cursor:pointer;color:var(--ink-soft)}
 .sib i{font-family:"IBM Plex Mono",monospace;font-style:normal;font-size:9.5px;color:var(--muted)}
+.sib i.half{color:var(--accent);font-style:italic}
+.relhow{font-size:13.5px;color:var(--ink);margin:0 0 12px;padding:8px 11px;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:var(--radius);line-height:1.45}
 .sib:hover{border-color:var(--accent);color:var(--accent)}
 .relbox{border:1px solid var(--line);border-radius:var(--radius);padding:4px 12px 10px;
   background:var(--surface-2);margin-bottom:6px}
@@ -607,17 +610,18 @@ function slotHTML(childId, role){
 function sibsHTML(id){
   var s = siblingsOf(id);
   if(!s.length) return "";
-  var h = '<div class="sibs"><span class="sibs-lbl">with</span>';
+  var h = '<div class="sibs"><span class="sibs-lbl">brothers &amp; sisters</span>';
   s.forEach(function(x){
     var partner = partnerOf(x), kids = childrenOf(x.id);
     h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">' +
-      esc(x.given || "?") + (x.birthYear ? ' <i>' + esc(x.birthYear) + '</i>' : '') + '</button>';
+      esc(x.given || "?") + (x.birthYear ? ' <i>' + esc(x.birthYear) + '</i>' : '') +
+      (isHalf(x, id) ? ' <i class="half">half</i>' : '') + '</button>';
     /* their own family, so aunts and uncles are not dead ends on the chart */
     if(partner || kids.length){
       h += '<span class="sibfam">';
-      if(partner) h += '&amp; <button class="siblink" data-open="' + partner.id + '">' +
+      if(partner) h += 'm. <button class="siblink" data-open="' + partner.id + '">' +
         esc(fullName(partner)) + '</button>';
-      if(kids.length) h += (partner ? ' &middot; ' : '') + kids.map(function(k){
+      if(kids.length) h += (partner ? ' &middot; ' : '') + 'children: ' + kids.map(function(k){
         return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") + '</button>';
       }).join(', ');
       h += '</span>';
@@ -645,11 +649,11 @@ function partnersOf(p){
 function alsoHTML(p, drawnPartnerId){
   var others = partnersOf(p).filter(function(x){ return x.id !== drawnPartnerId; });
   if(!others.length) return "";
-  var h = '<div class="sibs also"><span class="sibs-lbl">also</span>';
+  var h = '<div class="sibs also"><span class="sibs-lbl">also married</span>';
   others.forEach(function(x){
     var kids = childrenOf(p.id).filter(function(c){ return c.fatherId === x.id || c.motherId === x.id; });
-    h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">&amp; ' + esc(fullName(x)) + '</button>';
-    if(kids.length) h += '<span class="sibfam">' + kids.map(function(k){
+    h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">' + esc(fullName(x)) + '</button>';
+    if(kids.length) h += '<span class="sibfam">children: ' + kids.map(function(k){
       return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") +
         (k.birthYear ? ' <i>' + esc(k.birthYear) + '</i>' : '') + '</button>';
     }).join(', ') + '</span>';
@@ -1020,7 +1024,8 @@ function drawDrawer(){
     ? (pending ? "New " + pending.role : "New person") : fullName(d);
   document.getElementById("d-eyebrow").textContent = isNew
     ? (pending ? (fullName(people[pending.childId]) + "’s " + pending.role) : "Adding to the tree")
-    : (d.id === curRoot() ? "The chart is centred on them" : (d.addedBy ? "Added by " + d.addedBy : "Person"));
+    : (d.id === curRoot() ? "The chart is centred on them"
+       : (relationWords(d.id, curRoot()) || (d.addedBy ? "Added by " + d.addedBy : "Person")));
   if(isNew) tab = "facts";
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
     t.classList.toggle("on", t.dataset.tab === tab);
@@ -1031,27 +1036,114 @@ function drawDrawer(){
                  : tab === "records" ? recordsHTML(d) : sourcesHTML(d);
 }
 
+/* A half-sibling shares exactly one parent. Only called when both parents of
+   both people are recorded - a missing parent is unknown, not different. */
+function isHalf(sib, id){
+  var p = people[id]; if(!p || !sib) return false;
+  if(!p.fatherId || !p.motherId || !sib.fatherId || !sib.motherId) return false;
+  return (sib.fatherId === p.fatherId) !== (sib.motherId === p.motherId);
+}
+
+/* Every ancestor of `id`, with how many generations up they sit (1 = parent). */
+function ancestorDepths(id){
+  var out = {}, q = [[id, 0]];
+  while(q.length){
+    var cur = q.shift(), p = people[cur[0]]; if(!p) continue;
+    [p.fatherId, p.motherId].forEach(function(pid){
+      if(pid && people[pid] && out[pid] === undefined){ out[pid] = cur[1] + 1; q.push([pid, cur[1] + 1]); }
+    });
+  }
+  return out;
+}
+function sexWord(p, m, f, n){ return p.sex === "M" ? m : p.sex === "F" ? f : n; }
+function grandWord(n){ /* 0 = parent, 1 = grand, 2 = great-grand ... */
+  if(n <= 0) return ""; var s = "grand"; for(var k = 1; k < n; k++) s = "great-" + s; return s;
+}
+function greatWord(n){ var s = ""; for(var k = 0; k < n; k++) s += "great-"; return s; }
+function ordWord(n){ return n === 1 ? "first" : n === 2 ? "second" : n === 3 ? "third" : n + "th"; }
+
+/* How `id` is related to `baseId`, in words: "Kirsty's grandmother",
+   "Peter's half-sister (same mother, Esther)", "Christine's brother-in-law". */
+function relationWords(id, baseId, hop){
+  hop = hop || 0;
+  if(!id || !baseId || id === baseId) return "";
+  var a = people[id], b = people[baseId]; if(!a || !b) return "";
+  var bn = esc(b.given || "them") + "\u2019s ";
+  var upB = ancestorDepths(baseId);
+  if(upB[id] !== undefined) return bn + grandWord(upB[id] - 1) + sexWord(a, "father", "mother", "parent");
+  var upA = ancestorDepths(id);
+  if(upA[baseId] !== undefined) return bn + grandWord(upA[baseId] - 1) + sexWord(a, "son", "daughter", "child");
+  var sameF = a.fatherId && a.fatherId === b.fatherId, sameM = a.motherId && a.motherId === b.motherId;
+  if(sameF || sameM){
+    var w = sexWord(a, "brother", "sister", "sibling");
+    if(!isHalf(a, baseId)) return bn + w;
+    var via = sameM ? people[a.motherId] : people[a.fatherId];
+    return bn + "half-" + w + " (same " + (sameM ? "mother" : "father") + (via && via.given ? ", " + esc(via.given) : "") + ")";
+  }
+  if(partnersOf(b).some(function(x){ return x.id === id; })) return bn + sexWord(a, "husband", "wife", "partner");
+  var best = null;
+  for(var k in upA){
+    if(upB[k] !== undefined && (!best || upA[k] + upB[k] < best.da + best.db)) best = {k:k, da:upA[k], db:upB[k]};
+  }
+  if(best){
+    var da = best.da, db = best.db;
+    if(da === 1 && db >= 2) return bn + greatWord(db - 2) + sexWord(a, "uncle", "aunt", "aunt or uncle");
+    if(db === 1 && da >= 2) return bn + greatWord(da - 2) + sexWord(a, "nephew", "niece", "niece or nephew");
+    if(da >= 2 && db >= 2){
+      var deg = Math.min(da, db) - 1, rem = Math.abs(da - db);
+      return bn + ordWord(deg) + " cousin" + (rem ? " " + rem + (rem === 1 ? " time" : " times") + " removed" : "");
+    }
+  }
+  if(hop) return "";
+  /* one step through a marriage: X's husband, or related to X's wife */
+  var pa = partnersOf(a);
+  for(var i = 0; i < pa.length; i++){
+    var w2 = relationWords(pa[i].id, baseId, 1);
+    if(w2) return sexWord(a, "husband", "wife", "partner") + " of " + esc(fullName(pa[i])) + " (" + w2 + ")";
+  }
+  var pb = partnersOf(b);
+  for(var j2 = 0; j2 < pb.length; j2++){
+    var w3 = relationWords(id, pb[j2].id, 1);
+    if(w3) return w3 + " \u2014 on " + esc(pb[j2].given || "their partner") + "\u2019s side";
+  }
+  return "";
+}
+
 function relativesHTML(d){
   var fa = d.fatherId && people[d.fatherId], mo = d.motherId && people[d.motherId];
-  var sp = partnerOf(d), kids = childrenOf(d.id), sibs = siblingsOf(d.id);
-  function line(lbl, who2, addRole){
-    var v = who2 ? ('<a href="#" data-open="' + who2.id + '" style="color:var(--ink);font-weight:500;text-decoration:none">' +
-                    esc(fullName(who2)) + '</a>')
-                 : ('<button class="btn sm" data-rel="' + addRole + '" data-of="' + d.id + '">Add ' + lbl.toLowerCase() + '</button>');
-    return '<div class="srcline"><div class="k">' + lbl + '</div><div class="v">' + v + '</div></div>';
-  }
+  var partners = partnersOf(d), kids = childrenOf(d.id), sibs = siblingsOf(d.id);
+  function link(x){ return '<a href="#" data-open="' + x.id + '" style="color:var(--ink);font-weight:500;text-decoration:none">' + esc(fullName(x)) + '</a>'; }
+  function row(lbl, inner){ return '<div class="srcline"><div class="k">' + lbl + '</div><div class="v">' + inner + '</div></div>'; }
+  function addBtn(role, txt){ return '<button class="btn sm" data-rel="' + role + '" data-of="' + d.id + '">' + txt + '</button>'; }
   var h = '<div class="relbox">';
-  h += line("Father", fa, "father");
-  h += line("Mother", mo, "mother");
-  h += line("Partner", sp, "partner");
-  h += '<div class="srcline"><div class="k">Siblings</div><div class="v">' +
-       (sibs.length ? sibs.map(function(s){ return '<a href="#" data-open="' + s.id +
-         '" style="color:var(--ink);text-decoration:none">' + esc(fullName(s)) + '</a>'; }).join(", ") + ' &middot; '
-        : '') + '<button class="btn sm" data-rel="sibling" data-of="' + d.id + '">Add sibling</button></div></div>';
-  h += '<div class="srcline"><div class="k">Children</div><div class="v">' +
-       (kids.length ? kids.map(function(s){ return '<a href="#" data-open="' + s.id +
-         '" style="color:var(--ink);text-decoration:none">' + esc(fullName(s)) + '</a>'; }).join(", ") + ' &middot; '
-        : '') + '<button class="btn sm" data-rel="child" data-of="' + d.id + '">Add child</button></div></div>';
+  var base = curRoot();
+  if(base && base !== d.id){
+    var how = relationWords(d.id, base);
+    if(how) h += '<div class="relhow">' + how.charAt(0).toUpperCase() + how.slice(1) + '</div>';
+  }
+  h += row("Father", fa ? link(fa) : addBtn("father", "Add father"));
+  h += row("Mother", mo ? link(mo) : addBtn("mother", "Add mother"));
+  h += row(partners.length > 1 ? "Married / partners" : "Married / partner",
+    (partners.length ? partners.map(link).join(", ") + ' &middot; ' : '') + addBtn("partner", "Add partner"));
+  var full = sibs.filter(function(s){ return !isHalf(s, d.id); }), half = sibs.filter(function(s){ return isHalf(s, d.id); });
+  h += row("Brothers &amp; sisters", (full.length ? full.map(link).join(", ") + ' &middot; ' : '') + addBtn("sibling", "Add brother or sister"));
+  if(half.length) h += row("Half-brothers &amp; sisters", half.map(function(s){
+    var sameM = s.motherId === d.motherId;
+    return link(s) + ' <span style="color:var(--muted);font-size:12px">(same ' + (sameM ? "mother" : "father") + ')</span>';
+  }).join(", "));
+  var byOther = {}, order = [];
+  kids.forEach(function(k){
+    var o = (k.fatherId === d.id ? k.motherId : k.fatherId) || "-";
+    if(!byOther[o]){ byOther[o] = []; order.push(o); }
+    byOther[o].push(k);
+  });
+  var kidsHTML = order.map(function(key){
+    var names = byOther[key].map(link).join(", ");
+    return (order.length > 1 && people[key])
+      ? '<span style="color:var(--muted);font-size:12px">with ' + esc(people[key].given || "") + ':</span> ' + names
+      : names;
+  }).join('<br>');
+  h += row("Children", (kids.length ? kidsHTML + ' &middot; ' : '') + addBtn("child", "Add child"));
   return h + '</div>';
 }
 
