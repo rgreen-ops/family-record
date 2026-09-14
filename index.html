@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<title>The Family Record</title>
+<title>The Green Family Record</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 
@@ -251,17 +251,22 @@ textarea{min-height:74px;resize:vertical}
   <div class="gatecard">
     <h1>The Family Record</h1>
     <p class="lead">A private family tree.
-       Only people who have been added to the family list can get in.</p>
+       Only people on the family list can get in &mdash; everyone else sees nothing, whatever they try.</p>
     <label class="fl" for="gate-email">Your email address</label>
     <input type="text" id="gate-email" placeholder="you@example.com" autocomplete="email">
-    <button class="btn primary" id="send-link" style="margin-top:12px">Email me a sign-in link</button>
-    <p class="gate-msg" id="gate-msg">No password to remember &mdash; we email you a link that signs you straight in.</p>
+    <label class="fl" for="gate-pass">Family password</label>
+    <input type="password" id="gate-pass" placeholder="the password Richard gave you" autocomplete="current-password">
+    <button class="btn primary" id="sign-in-pw" style="margin-top:14px">Sign in</button>
+    <p class="gate-msg" id="gate-msg">First time? Just put in your email and the family password &mdash;
+      it sets your account up as you sign in.</p>
+    <p class="gate-msg" style="margin-top:14px">
+      <a href="#" id="send-link">Forgotten it? Email me a sign-in link instead</a></p>
   </div>
 </div>
 <div id="app" hidden>
 <div class="masthead">
   <div>
-    <h1 id="mh-title">The Family Record</h1>
+    <h1 id="mh-title">The Green Family Record</h1>
     <div class="sub" id="mh-sub">A shared family tree &middot; every fact marked verified or unverified</div>
   </div>
   <div class="mh-actions">
@@ -317,7 +322,7 @@ textarea{min-height:74px;resize:vertical}
 var people = {}, questions = {}, rootId = null, db = null, sb = null, session = null;
 var selId = null, editId = null, pending = null, tab = "facts", draft = null;
 var view = "tree";
-var LS = "family_record_tree_v2", LSNAME = "family_record_who";
+var LS = "ricoman_family_tree_v2", LSNAME = "ricoman_family_who";
 var who = "";
 
 function uid(){ return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -770,7 +775,7 @@ function sourcesHTML(d){
   h += '<label class="fl" for="s-kind">Add evidence</label><select id="s-kind">' +
     ["Birth","Marriage","Death","Census","Probate","Military","Newspaper","Parish","Other"]
       .map(function(k){ return '<option>' + k + '</option>'; }).join("") + '</select>';
-  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: SURNAME, Forename. Mother&rsquo;s maiden name ______. District, Dec quarter 1928, vol 8c page 313."></textarea>';
+  h += '<label class="fl" for="s-text">Citation</label><textarea id="s-text" placeholder="FreeBMD birth index: GREEN, Derek P. Mother&rsquo;s maiden name BATTERSBY. Leigh, Dec quarter 1928, vol 8c page 313."></textarea>';
   h += '<div class="dactions"><button class="btn primary" id="s-add">Add evidence</button></div>';
   return h;
 }
@@ -1036,19 +1041,49 @@ function onSignedIn(){
   connect();
 }
 
-document.getElementById("send-link").addEventListener("click", function(){
+function gateMsg(t){ document.getElementById("gate-msg").textContent = t; }
+
+/* Sign in with the shared family password. If there is no account yet for that
+   address, the same password creates one — so nobody has to be set up first. */
+function passwordSignIn(){
   var email = document.getElementById("gate-email").value.trim();
-  if(!email){ document.getElementById("gate-msg").textContent = "Put your email address in first."; return; }
-  document.getElementById("gate-msg").textContent = "Sending…";
+  var pass  = document.getElementById("gate-pass").value;
+  if(!email || !pass){ gateMsg("Put in your email address and the family password."); return; }
+  gateMsg("Signing in…");
+  sb.auth.signInWithPassword({ email: email, password: pass }).then(function(r){
+    if(!r.error) return;
+    if(/invalid login credentials/i.test(r.error.message || "")){
+      gateMsg("Setting your account up…");
+      sb.auth.signUp({ email: email, password: pass }).then(function(s){
+        if(s.error){ gateMsg(s.error.message); return; }
+        if(s.data && s.data.session) return;              // straight in
+        sb.auth.signInWithPassword({ email: email, password: pass }).then(function(t){
+          if(t.error) gateMsg("Account made, but sign-in did not take: " + t.error.message);
+        });
+      });
+    } else {
+      gateMsg(r.error.message);
+    }
+  });
+}
+
+document.getElementById("sign-in-pw").addEventListener("click", passwordSignIn);
+["gate-email","gate-pass"].forEach(function(id){
+  document.getElementById(id).addEventListener("keydown", function(e){
+    if(e.key === "Enter") passwordSignIn();
+  });
+});
+
+document.getElementById("send-link").addEventListener("click", function(e){
+  e.preventDefault();
+  var email = document.getElementById("gate-email").value.trim();
+  if(!email){ gateMsg("Put your email address in first."); return; }
+  gateMsg("Sending…");
   sb.auth.signInWithOtp({ email: email, options:{ emailRedirectTo: location.href.split("#")[0] } })
     .then(function(r){
-      document.getElementById("gate-msg").textContent = r.error
-        ? ("Could not send: " + r.error.message)
-        : "Check your email — there is a sign-in link waiting. It expires in an hour.";
+      gateMsg(r.error ? ("Could not send: " + r.error.message)
+                      : "Check your email — there is a sign-in link waiting. It expires in an hour.");
     });
-});
-document.getElementById("gate-email").addEventListener("keydown", function(e){
-  if(e.key === "Enter") document.getElementById("send-link").click();
 });
 document.getElementById("sign-out").addEventListener("click", function(){
   if(sb) sb.auth.signOut();
