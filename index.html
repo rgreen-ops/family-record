@@ -91,6 +91,16 @@ a{color:var(--accent)}
 
 .canvas{padding:28px 22px 60px;overflow-x:auto}
 .chart{display:inline-flex;min-width:100%}
+.zoomctl{display:flex;align-items:center;gap:4px}
+.zbtn{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  width:26px;height:24px;font-size:14px;line-height:1;cursor:pointer;padding:0}
+.zbtn.wide{width:auto;padding:0 9px;font-size:12px}
+.zbtn:hover{border-color:var(--ink-soft)}
+.zbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#z-lvl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+  min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
+#zoomwrap{transform-origin:top left;transition:transform .15s ease}
+@media (prefers-reduced-motion:reduce){#zoomwrap{transition:none}}
 .node{display:flex;align-items:center}
 .node>.card-wrap{display:flex;align-items:center;position:relative}
 
@@ -289,6 +299,12 @@ textarea{min-height:74px;resize:vertical}
   <div class="stat">Verified <b id="s-verified">0</b></div>
   <div class="stat">Needs checking <b id="s-todo">0</b></div>
   <div class="stat">Generations <b id="s-gens">0</b></div>
+  <div class="zoomctl">
+    <button class="zbtn" id="z-out" title="Zoom out">&minus;</button>
+    <span id="z-lvl">100%</span>
+    <button class="zbtn" id="z-in" title="Zoom in">+</button>
+    <button class="zbtn wide" id="z-fit">Fit whole tree</button>
+  </div>
   <div class="spacer"></div>
   <div class="status" id="status">Loading…</div>
 </div>
@@ -348,6 +364,7 @@ function setStatus(t, cls){
 
 /* ---------- identity (typed, remembered locally) ---------- */
 function loadWho(){
+  try{ var z = parseFloat(localStorage.getItem("family_record_zoom")); if(z > 0) zoom = z; }catch(e){}
   try{ who = localStorage.getItem(LSNAME) || ""; }catch(e){ who = ""; }
   var b = document.getElementById("whoami");
   b.textContent = who ? ("Signed in as " + who) : "Sign your name";
@@ -575,9 +592,35 @@ function render(){
       '<button class="btn primary" data-firstadd="1">Add the first person</button></div>';
     return;
   }
-  canvas.innerHTML = householdHTML() +
+  canvas.innerHTML = '<div id="zoomwrap">' + householdHTML() +
     '<div><div class="genlabel">Pedigree — ancestors read left to right</div>' +
-    '<div class="chart">' + nodeHTML(rootId, 0, 7) + '</div></div>';
+    '<div class="chart">' + nodeHTML(rootId, 0, 7) + '</div></div></div>';
+  applyZoom();
+}
+
+/* ---------- zoom ---------- */
+var zoom = 1;
+function applyZoom(){
+  var w = document.getElementById("zoomwrap");
+  var lvl = document.getElementById("z-lvl");
+  if(lvl) lvl.textContent = Math.round(zoom * 100) + "%";
+  if(!w) return;
+  w.style.transform = zoom === 1 ? "" : "scale(" + zoom + ")";
+  /* keep the scrollable area honest so scaled-down content does not leave dead space */
+  w.style.width = zoom < 1 ? (100 / zoom) + "%" : "";
+}
+function setZoom(z){
+  zoom = Math.min(1.4, Math.max(0.25, Math.round(z * 20) / 20));
+  try{ localStorage.setItem("family_record_zoom", String(zoom)); }catch(e){}
+  applyZoom();
+}
+function fitAll(){
+  var w = document.getElementById("zoomwrap"), c = document.getElementById("canvas");
+  if(!w || !c) return;
+  var prev = w.style.transform; w.style.transform = ""; w.style.width = "";
+  var need = w.scrollWidth, have = c.clientWidth - 40;
+  w.style.transform = prev;
+  setZoom(need > have ? have / need : 1);
 }
 
 function householdHTML(){
@@ -891,6 +934,9 @@ document.addEventListener("click", function(ev){
   else if(id === "s-add") doAddSource();
   else if(id === "d-close" || id === "scrim") closeDrawer();
   else if(id === "btn-add"){ openNew(null,null); }
+  else if(id === "z-in") setZoom(zoom + 0.1);
+  else if(id === "z-out") setZoom(zoom - 0.1);
+  else if(id === "z-fit") fitAll();
   else if(id === "btn-gedcom") exportGedcom();
   else if(id === "btn-people") showPeople();
   else if(id === "whoami") askWho();
