@@ -292,6 +292,23 @@ textarea{min-height:74px;resize:vertical}
   border-radius:var(--radius);padding:9px 12px;margin:0 0 16px;font-size:13px;color:var(--ink-soft)}
 .focusbar b{color:var(--ink)}
 
+/* ---------- stats ---------- */
+.stats{max-width:960px;margin:0 auto;padding:2px 0 44px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:0 0 10px}
+.stat-tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.stat-tile b{display:block;font-family:"Newsreader",Georgia,serif;font-size:26px;font-weight:500;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums}
+.stat-tile span{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.stat-two{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+.stat-sec{margin:24px 0 0;min-width:0}
+.stat-sec h3{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:19px;margin:0 0 6px;padding-bottom:5px;border-bottom:1px solid var(--line);letter-spacing:-.01em}
+.stat-row{display:grid;grid-template-columns:150px 40px 1fr;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.stat-row .k{font-weight:600;color:var(--ink);font-size:13.5px;overflow-wrap:anywhere}
+.stat-row .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stat-row .sib{margin:2px 3px 2px 0}
+.stat-bar{height:7px;background:var(--accent);border-radius:2px;opacity:.7;margin:4px 0 6px}
+.stat-row-3{grid-template-columns:1fr 90px 1fr}
+@media (max-width:700px){.stat-two{grid-template-columns:1fr}.stat-row{grid-template-columns:104px 32px 1fr;gap:8px}.stat-row-3{grid-template-columns:1fr 70px 1fr}}
+
 /* `hidden` must beat any display rule below, or the panel never goes away. */
 [hidden]{display:none !important}
 #gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--ground)}
@@ -336,6 +353,7 @@ textarea{min-height:74px;resize:vertical}
     <button class="btn" id="btn-questions">Questions <span id="q-count"></span></button>
     <button class="btn" id="btn-review">Review queue</button>
     <button class="btn" id="btn-timeline">Timeline</button>
+    <button class="btn" id="btn-stats">Stats</button>
     <button class="btn" id="btn-people">All people</button>
     <button class="btn" id="btn-gedcom">Export</button>
     <button class="btn primary" id="btn-add">Add person</button>
@@ -598,7 +616,7 @@ function cardHTML(p){
   var place = (p.birthPlace || p.deathPlace || "").trim();
   var lbl = st === "verified" ? "Verified" : st === "checking" ? "Check this" : "Family memory";
   return '<button class="' + cls + '" data-open="' + p.id + '">' +
-    '<div class="nm">' + esc(p.given || "—") + ' <span class="sn">' + esc(displaySurname(p)) + '</span></div>' +
+    '<div class="nm">' + esc(p.given || "—") + (p.middle ? ' ' + esc(p.middle) : '') + ' <span class="sn">' + esc(displaySurname(p)) + '</span></div>' +
     (span ? '<div class="dt">' + esc(span) + '</div>' : '') +
     (place ? '<div class="pl">' + esc(place) + '</div>' : '') +
     '<span class="chip ' + st + '">' + lbl + '</span></button>';
@@ -614,7 +632,7 @@ function sibsHTML(id){
   s.forEach(function(x){
     var partner = partnerOf(x), kids = childrenOf(x.id);
     h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">' +
-      esc(x.given || "?") + (x.birthYear ? ' <i>' + esc(x.birthYear) + '</i>' : '') +
+      esc(x.given || "?") + (x.middle ? ' ' + esc(x.middle) : '') + (x.birthYear ? ' <i>' + esc(x.birthYear) + '</i>' : '') +
       (isHalf(x, id) ? ' <i class="half">half</i>' : '') + '</button>';
     /* their own family, so aunts and uncles are not dead ends on the chart */
     if(partner || kids.length){
@@ -622,7 +640,7 @@ function sibsHTML(id){
       if(partner) h += 'm. <button class="siblink" data-open="' + partner.id + '">' +
         esc(fullName(partner)) + '</button>';
       if(kids.length) h += (partner ? ' &middot; ' : '') + 'children: ' + kids.map(function(k){
-        return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") + '</button>';
+        return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") + (k.middle ? ' ' + esc(k.middle) : '') + '</button>';
       }).join(', ');
       h += '</span>';
     }
@@ -654,7 +672,7 @@ function alsoHTML(p, drawnPartnerId){
     var kids = childrenOf(p.id).filter(function(c){ return c.fatherId === x.id || c.motherId === x.id; });
     h += '<span class="sibwrap"><button class="sib" data-open="' + x.id + '">' + esc(fullName(x)) + '</button>';
     if(kids.length) h += '<span class="sibfam">children: ' + kids.map(function(k){
-      return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") +
+      return '<button class="siblink" data-open="' + k.id + '">' + esc(k.given || "?") + (k.middle ? ' ' + esc(k.middle) : '') +
         (k.birthYear ? ' <i>' + esc(k.birthYear) + '</i>' : '') + '</button>';
     }).join(', ') + '</span>';
     h += '</span>';
@@ -690,6 +708,7 @@ function render(){
 
   if(view === "review"){ canvas.innerHTML = reviewHTML(); return; }
   if(view === "timeline"){ canvas.innerHTML = timelineHTML(); return; }
+  if(view === "stats"){ canvas.innerHTML = statsHTML(); return; }
 
   if(!all.length || !curRoot() || !people[curRoot()]){
     canvas.innerHTML = '<div class="startcard"><h2>Start with yourself</h2>' +
@@ -993,10 +1012,132 @@ function timelineHTML(){
 
 function setView(v){
   view = v;
-  var r = document.getElementById("btn-review"), t = document.getElementById("btn-timeline");
+  var r = document.getElementById("btn-review"), t = document.getElementById("btn-timeline"), s = document.getElementById("btn-stats");
   if(r) r.textContent = v === "review"   ? "Back to tree" : "Review queue";
   if(t) t.textContent = v === "timeline" ? "Back to tree" : "Timeline";
+  if(s) s.textContent = v === "stats"    ? "Back to tree" : "Stats";
   render();
+}
+
+
+/* ---------- stats ----------
+   The record in numbers. Names are counted by their first token so "Lionel
+   Francis" and "Francis" both count towards Francis, which is the whole point:
+   a family shows itself in the names it keeps handing down. */
+function nameTokens(s){
+  return (s||"").split(/[\s\-]+/).map(function(t){ return t.replace(/[^A-Za-z']/g,""); })
+    .filter(function(t){ return t.length > 1; });
+}
+function capName(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""; }
+function countBy(items, keyFn){
+  var m = {};
+  items.forEach(function(x){ var k = keyFn(x); if(!k) return; (m[k] = m[k] || []).push(x); });
+  return Object.keys(m).map(function(k){ return {key:k, items:m[k], n:m[k].length}; })
+    .sort(function(a,b){ return b.n - a.n || a.key.localeCompare(b.key); });
+}
+function chipsFor(items, max){
+  max = max || 8;
+  var seen = {}, uniq = items.filter(function(p){ if(seen[p.id]) return false; seen[p.id] = 1; return true; });
+  return uniq.slice(0, max).map(function(p){
+    return '<button class="sib" data-open="' + p.id + '">' + esc(p.given||"?") + (p.middle ? ' ' + esc(p.middle) : '') +
+      (p.birthYear ? ' <i>' + esc(p.birthYear) + '</i>' : '') + '</button>';
+  }).join('') + (uniq.length > max ? ' <span class="tl-place">+' + (uniq.length - max) + ' more</span>' : '');
+}
+function statTile(v, l){ return '<div class="stat-tile"><b>' + v + '</b><span>' + l + '</span></div>'; }
+function statRows(groups, max, barMax){
+  return groups.slice(0, max).map(function(g){
+    var bar = barMax ? '<div class="stat-bar" style="width:' + Math.max(4, Math.round(100 * g.n / barMax)) + '%"></div>' : '';
+    return '<div class="stat-row"><div class="k">' + esc(g.key) + '</div><div class="n">' + g.n + '</div><div>' + bar + chipsFor(g.items, 6) + '</div></div>';
+  }).join('');
+}
+function statsHTML(){
+  var all = list();
+  if(!all.length) return '<div class="empty">Nothing to count yet.</div>';
+  var h = '<div class="stats"><div class="genlabel">Stats &mdash; the whole record in numbers</div>';
+
+  /* headline */
+  var ver = all.filter(function(p){ return statusOf(p)==="verified"; }).length;
+  var fam = all.filter(function(p){ return statusOf(p)==="family"; }).length;
+  var chk = all.filter(function(p){ return statusOf(p)==="checking"; }).length;
+  var years = all.map(function(p){ return parseInt(p.birthYear,10); }).filter(function(y){ return y > 0; });
+  var minY = years.length ? Math.min.apply(null, years) : 0, maxY = years.length ? Math.max.apply(null, years) : 0;
+  var exact = all.filter(function(p){ return (p.birthDate||"").trim(); }).length;
+  var rootP = people[rootId];
+  h += '<div class="stat-grid">' + statTile(all.length, "people") + statTile(ver, "verified from a record") +
+    statTile(fam, "family memory") + statTile(chk, "to check") +
+    statTile(rootId ? depthOf(rootId) : 0, "generations back from " + (rootP ? esc(rootP.given) : "the start")) +
+    statTile(exact, "exact birthdays") + (minY ? statTile(minY + "&ndash;" + maxY, "earliest to latest birth") : "") + '</div>';
+
+  /* names */
+  var firsts = countBy(all, function(p){ return capName(nameTokens(p.given)[0]); }).filter(function(g){ return g.n > 1; });
+  var mids = [];
+  all.forEach(function(p){ nameTokens(p.middle).forEach(function(t){ mids.push({p:p, t:capName(t)}); }); });
+  var midGroups = countBy(mids, function(x){ return x.t; }).map(function(g){ return {key:g.key, n:g.n, items:g.items.map(function(x){ return x.p; })}; });
+  h += '<div class="stat-two"><div class="stat-sec"><h3>First names that recur</h3>' +
+    (firsts.length ? statRows(firsts, 12, firsts[0].n) : '<div class="empty">No name appears twice yet.</div>') + '</div>';
+  h += '<div class="stat-sec"><h3>Middle names</h3>' +
+    (midGroups.length ? statRows(midGroups, 12, midGroups[0].n) : '<div class="empty">No middle names recorded yet.</div>') + '</div></div>';
+
+  /* names handed down */
+  var handed = [];
+  all.forEach(function(p){
+    var mine = nameTokens(p.given).concat(nameTokens(p.middle)).map(function(t){ return t.toLowerCase(); });
+    if(!mine.length) return;
+    var anc = ancestorDepths(p.id);
+    Object.keys(anc).forEach(function(aid){
+      var a = people[aid], d = anc[aid]; if(!a || d > 3) return;
+      var af = (nameTokens(a.given)[0]||"").toLowerCase();
+      if(af && mine.indexOf(af) >= 0)
+        handed.push({p:p, a:a, rel: d === 1 ? sexWord(a,"father","mother","parent") : grandWord(d-1) + sexWord(a,"father","mother","parent"), name: capName(af)});
+    });
+  });
+  handed.sort(function(x,y){ return (parseInt(x.p.birthYear,10)||0) - (parseInt(y.p.birthYear,10)||0); });
+  h += '<div class="stat-sec"><h3>Names handed down</h3>';
+  if(!handed.length) h += '<div class="empty">Nobody yet carries an ancestor\u2019s name.</div>';
+  else handed.forEach(function(x){
+    h += '<div class="stat-row stat-row-3"><div class="k"><button class="siblink" data-open="' + x.p.id + '">' + esc(fullName(x.p)) + '</button></div>' +
+      '<div class="n">' + esc(x.name) + '</div><div>from ' + '<button class="siblink" data-open="' + x.a.id + '">' + esc(fullName(x.a)) + '</button>' +
+      ' <span class="tl-place">&middot; ' + esc(x.rel) + '</span></div></div>';
+  });
+  h += '</div>';
+
+  /* surnames and places */
+  var surn = countBy(all, function(p){ return capName(((p.maiden||"").trim() || p.surname || "").trim()); });
+  var places = countBy(all, function(p){ return capName((p.birthPlace||"").split(/[,(]/)[0].trim()); });
+  h += '<div class="stat-two"><div class="stat-sec"><h3>Family names</h3>' + statRows(surn, 14, surn.length ? surn[0].n : 1) + '</div>';
+  h += '<div class="stat-sec"><h3>Where people were born</h3>' + (places.length ? statRows(places, 12, places[0].n) : '<div class="empty">No places yet.</div>') + '</div></div>';
+
+  /* decades */
+  var dec = countBy(all.filter(function(p){ return parseInt(p.birthYear,10) > 0; }), function(p){ return (Math.floor(parseInt(p.birthYear,10)/10)*10) + "s"; })
+    .sort(function(a,b){ return a.key.localeCompare(b.key); });
+  var decMax = dec.reduce(function(m,g){ return Math.max(m, g.n); }, 1);
+  h += '<div class="stat-sec"><h3>Births by decade</h3>' + statRows(dec, 30, decMax) + '</div>';
+
+  /* lives */
+  var lived = all.map(function(p){ var b = parseInt(p.birthYear,10), d = parseInt(p.deathYear,10); return (b > 0 && d > 0 && d >= b) ? {p:p, age:d-b} : null; }).filter(Boolean)
+    .sort(function(x,y){ return y.age - x.age; });
+  var avg = lived.length ? Math.round(lived.reduce(function(s,x){ return s + x.age; }, 0) / lived.length) : 0;
+  h += '<div class="stat-two"><div class="stat-sec"><h3>Longest lives</h3>' +
+    (lived.length ? '<p class="hintnote" style="margin:0 0 8px">' + lived.length + ' people with both dates &middot; average ' + avg + ' years</p>' +
+      lived.slice(0, 8).map(function(x){ return '<div class="stat-row"><div class="k"><button class="siblink" data-open="' + x.p.id + '">' + esc(fullName(x.p)) + '</button></div><div class="n">' + x.age + '</div><div><span class="tl-place">' + esc(lifespan(x.p)) + '</span></div></div>'; }).join('')
+      : '<div class="empty">No completed lives yet.</div>') + '</div>';
+
+  /* families */
+  var couples = {};
+  all.forEach(function(c){
+    if(!c.fatherId && !c.motherId) return;
+    var k = (c.fatherId||"-") + "|" + (c.motherId||"-");
+    (couples[k] = couples[k] || {fa:c.fatherId, mo:c.motherId, kids:[]}).kids.push(c);
+  });
+  var fams = Object.keys(couples).map(function(k){ return couples[k]; }).sort(function(a,b){ return b.kids.length - a.kids.length; }).slice(0, 8);
+  h += '<div class="stat-sec"><h3>Biggest families</h3>' + fams.map(function(f){
+    var fa = f.fa && people[f.fa], mo = f.mo && people[f.mo];
+    var who = (fa ? '<button class="siblink" data-open="' + fa.id + '">' + esc(fullName(fa)) + '</button>' : '') + (fa && mo ? ' &amp; ' : '') +
+              (mo ? '<button class="siblink" data-open="' + mo.id + '">' + esc(fullName(mo)) + '</button>' : '');
+    return '<div class="stat-row"><div class="k">' + who + '</div><div class="n">' + f.kids.length + '</div><div>' + chipsFor(f.kids, 10) + '</div></div>';
+  }).join('') + '</div></div>';
+
+  return h + '</div>';
 }
 
 /* ---------- drawer ---------- */
@@ -1362,6 +1503,7 @@ document.addEventListener("click", function(ev){
   else if(id === "whoami") askWho();
   else if(id === "btn-review"){ setView(view === "review" ? "tree" : "review"); }
   else if(id === "btn-timeline"){ setView(view === "timeline" ? "tree" : "timeline"); }
+  else if(id === "btn-stats"){ setView(view === "stats" ? "tree" : "stats"); }
 });
 document.addEventListener("keydown", function(e){
   if(e.key === "Escape" && document.getElementById("drawer").classList.contains("open")) closeDrawer();
