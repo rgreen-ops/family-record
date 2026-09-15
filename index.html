@@ -974,8 +974,13 @@ function timelineHTML(){
       what = link(e.p) + ' died' +
         (e.p.deathPlace ? ' <span class="tl-place">&middot; ' + esc(e.p.deathPlace) + '</span>' : age);
     } else {
-      what = link(e.p) + ' married ' +
-        (e.other ? link(e.other) : '<span class="tl-place">someone we have not named yet</span>');
+      /* on a wedding line a woman is her maiden name, not the name she took that day */
+      var maidenLink = function(x){
+        var n = ((x.given||"") + " " + (x.middle||"") + " " + ((x.maiden||"").trim() || x.surname || "")).replace(/\s+/g," ").trim();
+        return '<a href="#" data-open="' + x.id + '">' + esc(n) + '</a>';
+      };
+      what = maidenLink(e.p) + ' married ' +
+        (e.other ? maidenLink(e.other) : '<span class="tl-place">someone we have not named yet</span>');
     }
     if(!e.w.exact) what += '<span class="tl-approx">approx</span>';
     h += '<li class="tl-row' + (br ? ' ' + br.key : '') + '">' +
