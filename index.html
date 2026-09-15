@@ -833,6 +833,20 @@ function tlMarriage(p){
   });
   return found;
 }
+/* A baptism read out of its own citation: "baptised 15 April 1900 at St Mary, Lowton". */
+function tlBaptism(p){
+  var found = null;
+  (p.sources||[]).forEach(function(s){
+    if(found || !/bapti/i.test(s.kind||"")) return;
+    var t = s.text || "";
+    var m = t.match(/bapti[sz]ed\s+(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/i) || t.match(/\b(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\b/);
+    if(!m || !TL_MONTHS[m[2].toLowerCase()]) return;
+    var church = (t.slice(m.index + m[0].length).match(/^\s*(?:at|,)?\s*(St\.? [^,.;(]+(?:,\s*[A-Z][A-Za-z' ]+)?|[A-Z][^,.;(]{2,40}(?:,\s*[A-Z][A-Za-z' ]+)?)/) || [])[1] || "";
+    found = {y:+m[3], m:TL_MONTHS[m[2].toLowerCase()], d:+m[1], exact:true,
+             txt:(+m[1])+" "+TL_NAMES[TL_MONTHS[m[2].toLowerCase()]]+" "+m[3], church:church.trim()};
+  });
+  return found;
+}
 function tlRef(t){
   var m = (t||"").match(/vol(?:ume)?\s*([0-9a-z]+)\s*,?\s*page\s*(\d+)/i);
   return m ? (m[1]+"/"+m[2]).toLowerCase() : "";
@@ -907,6 +921,8 @@ function timelineHTML(){
     if(b) ev.push({w:b, kind:"born", p:p});
     var d = tlWhen(p.deathDate, p.deathYear);
     if(d) ev.push({w:d, kind:"died", p:p});
+    var bp = tlBaptism(p);
+    if(bp && !(b && b.exact && b.y === bp.y && b.m === bp.m && b.d === bp.d)) ev.push({w:bp, kind:"baptised", p:p});
     var m = tlMarriage(p);
     if(m){
       var other = partnerOf(p);
@@ -948,6 +964,9 @@ function timelineHTML(){
     if(e.kind === "born"){
       what = link(e.p) + ' born' +
         (e.p.birthPlace ? ' <span class="tl-place">&middot; ' + esc(e.p.birthPlace) + '</span>' : '');
+    } else if(e.kind === "baptised"){
+      what = link(e.p) + ' baptised' +
+        (e.w.church ? ' <span class="tl-place">&middot; ' + esc(e.w.church) + '</span>' : '');
     } else if(e.kind === "died"){
       var age = "";
       var by = parseInt(e.p.birthYear, 10);
