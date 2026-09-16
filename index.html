@@ -112,6 +112,10 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .zbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .panhint{font-size:11px;color:var(--muted);letter-spacing:.01em}
 @media (max-width:760px){.panhint{display:none}}
+.card .ex{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-soft);margin-top:1px;letter-spacing:.01em}
+.card .oc{font-size:10.5px;color:var(--muted);font-style:italic;margin-top:2px}
+.genctl{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--line)}
+#g-lvl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);min-width:26px;text-align:center}
 #z-lvl{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
   min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
 #zoomwrap{transform-origin:top left;transition:transform .15s ease}
@@ -385,6 +389,9 @@ textarea{min-height:74px;resize:vertical}
     <span id="z-lvl">100%</span>
     <button class="zbtn" id="z-in" title="Zoom in">+</button>
     <button class="zbtn wide" id="z-fit">Fit whole tree</button>
+    <span class="genctl"><button class="zbtn" id="g-less" title="Fewer generations">&minus;</button>
+      <span id="g-lvl">all</span>
+      <button class="zbtn" id="g-more" title="More generations">+</button></span>
   </div>
   <span class="panhint">drag the background to move &middot; shift+scroll for sideways</span>
   <div class="spacer"></div>
@@ -422,6 +429,15 @@ textarea{min-height:74px;resize:vertical}
 
 var people = {}, questions = {}, rootId = null, db = null, sb = null, session = null;
 var focusId = null;   /* whose tree is on screen; local to this browser */
+/* How many generations of ancestors to draw. 99 means "everything we have" -
+   the old hard limit of 7 was quietly hiding the oldest people in the record. */
+var maxGen = 99;
+try{ var _mg = parseInt(localStorage.getItem("family_record_gens"), 10); if(_mg > 0) maxGen = _mg; }catch(e){}
+function setGens(n){
+  maxGen = Math.max(2, Math.min(99, n));
+  try{ localStorage.setItem("family_record_gens", String(maxGen)); }catch(e){}
+  render();
+}
 try{ focusId = localStorage.getItem("family_record_focus") || null; }catch(e){}
 function curRoot(){ return (focusId && people[focusId]) ? focusId : rootId; }
 function setFocus(id){
@@ -625,16 +641,36 @@ function leads(p){
 }
 
 /* ---------- chart ---------- */
+/* The exact dates, where a record actually gave us one - "b. 11 May 1924",
+   "d. 8 Oct 1972" - shortened so a card stays a card. */
+function shortDate(s){
+  s = (s || "").toString().trim();
+  if(!s) return "";
+  var m = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if(m) return m[1] + " " + m[2].slice(0,3) + " " + m[3];
+  m = s.match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4})$/);
+  if(m && TL_NAMES[+m[2]]) return (+m[1]) + " " + TL_NAMES[+m[2]].slice(0,3) + " " + m[3];
+  return s.length > 22 ? "" : s;
+}
+function exactDates(p){
+  var b = shortDate(p.birthDate), d = shortDate(p.deathDate), out = [];
+  if(b) out.push("b. " + esc(b));
+  if(d) out.push("d. " + esc(d));
+  return out.join(" &middot; ");
+}
 function cardHTML(p){
   var cls = "card " + (p.sex === "M" ? "m" : p.sex === "F" ? "f" : "");
   if(p.id === selId) cls += " sel";
-  var st = statusOf(p), span = lifespan(p);
+  var st = statusOf(p), span = lifespan(p), exact = exactDates(p);
   var place = (p.birthPlace || p.deathPlace || "").trim();
+  var occ = (p.occupation || "").trim();
   var lbl = st === "verified" ? "Verified" : st === "checking" ? "Check this" : "Family memory";
   return '<button class="' + cls + '" data-open="' + p.id + '">' +
     '<div class="nm">' + esc(p.given || "—") + (p.middle ? ' ' + esc(p.middle) : '') + ' <span class="sn">' + esc(displaySurname(p)) + '</span></div>' +
     (span ? '<div class="dt">' + esc(span) + '</div>' : '') +
+    (exact ? '<div class="ex">' + exact + '</div>' : '') +
     (place ? '<div class="pl">' + esc(place) + '</div>' : '') +
+    (occ ? '<div class="oc">' + esc(occ.length > 38 ? occ.slice(0,37) + "\u2026" : occ) + '</div>' : '') +
     '<span class="chip ' + st + '">' + lbl + '</span></button>';
 }
 function slotHTML(childId, role){
@@ -717,7 +753,10 @@ function render(){
   document.getElementById("s-people").textContent = all.length;
   document.getElementById("s-verified").textContent = all.filter(function(p){ return statusOf(p)==="verified"; }).length;
   document.getElementById("s-todo").textContent = all.filter(function(p){ return statusOf(p)!=="verified"; }).length;
-  document.getElementById("s-gens").textContent = curRoot() ? depthOf(curRoot()) : 0;
+  var deep = curRoot() ? depthOf(curRoot()) : 0;
+  document.getElementById("s-gens").textContent = deep;
+  var gl = document.getElementById("g-lvl");
+  if(gl) gl.textContent = (maxGen >= deep) ? "all" : String(maxGen);
 
   if(rootId && people[rootId] && people[rootId].surname)
     document.getElementById("mh-title").textContent = "The " + people[rootId].surname + " Family Record";
@@ -735,7 +774,7 @@ function render(){
   }
   canvas.innerHTML = focusBarHTML() + '<div id="zoomwrap">' + householdHTML() +
     '<div><div class="genlabel">Pedigree — ancestors read left to right</div>' +
-    '<div class="chart">' + nodeHTML(curRoot(), 0, 7) + '</div></div></div>';
+    '<div class="chart">' + nodeHTML(curRoot(), 0, maxGen) + '</div></div></div>';
   applyZoom();
 }
 
@@ -1553,6 +1592,8 @@ document.addEventListener("click", function(ev){
   else if(id === "z-in") setZoom(zoom + 0.1);
   else if(id === "z-out") setZoom(zoom - 0.1);
   else if(id === "z-fit") fitAll();
+  else if(id === "g-less") setGens(maxGen >= 99 ? (curRoot() ? depthOf(curRoot()) : 8) - 1 : maxGen - 1);
+  else if(id === "g-more") setGens(maxGen + 1);
   else if(id === "btn-gedcom") exportGedcom();
   else if(id === "btn-people") showPeople();
   else if(id === "whoami") askWho();
